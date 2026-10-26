@@ -19,6 +19,7 @@ and its tests have actually run and passed.
 | M11 | Open-source release on GitHub (Apache-2.0, UI/UX, more browsers) | Done (2026-10-25; owner's checks reported done with 1.2.0) |
 | M12 | Media: video/audio converter (ffmpeg) and optional yt-dlp add-on | Done (2026-10-26; owner's install check reported done with 1.2.0) |
 | M13 | SDM's own logo and look, a button over videos, the extension shipped with SDM | Done (2026-10-26) |
+| M14 | Android version: a native Kotlin app (APK) | In progress |
 
 ## M0: Environment inspection (done)
 
@@ -501,3 +502,24 @@ logo (from nine drawn options). Design: ADR-0021. Branch `m13/look-and-video-but
 install 1.2.0 (About 1.2.0, the new icon), add the extension with the assistant, turn on the
 video button and click it on a video page, a normal link opening SDM. This also covers the
 install checks left open in M11 and M12.
+
+## M14: Android version (in progress)
+
+Asked for by the owner on 2026-10-26; plan approved the same day (ADR-0022). Owner's choices:
+native Kotlin with Jetpack Compose, Android 10 or newer, device checks on the owner's phone over
+USB, a signed APK on GitHub Releases (no Google Play). The project lives in `android/`.
+
+- M14a: ADR-0022; the `android/` Gradle project (`engine` Kotlin/JVM module, `app` Compose
+  app) with the hexagon logo; a debug APK builds; tests run; a GitHub Actions job builds it.
+- M14b: the engine's safety parts and a single-connection download: network policy (ADR-0007,
+  ADR-0017), file names and no overwriting (ADR-0008), hand-followed redirects without
+  https-to-http (ADR-0015), errors and retries; tests against a local MockWebServer.
+- M14c: resume (ADR-0011) and splitting over up to 8 connections (ADR-0012).
+- M14d: the app: Add URL, the list, a foreground service with a progress notification, the
+  SQLite history, saving to Download/SDM through MediaStore.
+- M14e: Share → SDM (Android's share menu) and the queue limit.
+- M14f: a signed release APK from GitHub Actions, the owner's check on their phone, the
+  release notes and social post drafts.
+
+Left out of the first version: the native-messaging bridge, the Windows installer, the
+converter and yt-dlp, scheduler times and days, the speed limit.

@@ -621,3 +621,48 @@ deleted. A changed decision gets a new record that supersedes the old one.
   user opens (it only looks at video positions; the browser shows this permission). Chrome
   shows its "developer mode extensions" notice for unpacked extensions. The security model
   records both.
+
+## ADR-0022: An Android version as a native Kotlin app
+
+- **Date:** 2026-10-26 · **Status:** Accepted (M14 plan approved by the project owner)
+- **Context:** The owner asked for an installable Android version of SDM. The Windows app is
+  Python (PySide6, aiohttp); on a phone, downloads must keep running with the screen off,
+  report through notifications, accept links from Android's share menu and save where the
+  user finds them. The PC (i3-8100, 8 GB, no GPU) already has Android Studio, the Android SDK
+  (API 35 and 37), JDK 17, Gradle 9.6 and an emulator image (checked 2026-10-26).
+- **Options considered:** a native Kotlin app; Kotlin Multiplatform (nothing to share with a
+  Python desktop app); Python toolkits (Kivy, BeeWare, Flet), which ship a Python interpreter
+  inside the APK, need aiohttp's native parts built for Android (Kivy's build tool also needs
+  Linux) and reach foreground services and the share menu only through bridges.
+- **Decision (owner's choices: Kotlin + Compose, Android 10+, test on the owner's phone):**
+  - **Kotlin with Jetpack Compose** in `android/`, a Gradle project beside the Python app.
+    Android Gradle Plugin 9.4.1, Gradle 9.6 (wrapper), Kotlin 2.2.10, JDK 17. minSdk 29
+    (Android 10), so files go to the shared Download folder through MediaStore without a
+    storage permission. Application ID `io.github.conditionstech.sdm` (permanent once
+    released).
+  - **The design is ported, not the code:** `android/engine` is a plain Kotlin/JVM module (no
+    Android imports, like `sdm.engine` never imports Qt), so its tests run on the PC in
+    seconds without an emulator. `android/app` is the Android part (screens, service,
+    notifications, history, storage).
+  - **Same safety rules:** the network policy (ADR-0007, with ADR-0017's hidden-IPv4 checks)
+    runs inside OkHttp's `Dns` hook, so the checked addresses are the ones OkHttp connects to;
+    IP literals are checked before each request; redirects are followed by hand (at most 10),
+    re-checked, http/https only, no credentials, no https-to-http (ADR-0015); system proxies
+    are ignored. File names follow ADR-0008 (sanitised to one component, numbered
+    `name (1).ext`, never overwriting). SDM never opens or installs a downloaded file itself;
+    no cookies, no logins. Permissions: `INTERNET`, foreground service and notifications only.
+  - **Libraries (all Apache-2.0):** OkHttp 5 for HTTP, OkHttp's `mockwebserver3` for local
+    test servers, kotlinx-coroutines, AndroidX/Compose. The history uses Android's built-in
+    SQLite (no extra library).
+  - **First version (owner-approved scope):** Add URL; up to 8 connections with pause and
+    resume (also after the app is closed); history; a queue limit; Share → SDM instead of the
+    browser extension; a progress notification with downloads in a foreground service; the
+    hexagon logo. Left out: the native-messaging bridge, the Windows installer, the ffmpeg
+    converter and yt-dlp, scheduler times and days, the speed limit.
+  - **Release at $0:** a signed APK on GitHub Releases built by GitHub Actions; the signing key
+    is made by the owner and kept as a GitHub secret, never in Git. Google Play ($25) is out
+    unless the owner decides otherwise.
+- **Consequences:** Two languages to maintain; a fix to a safety rule must be made in both
+  engines (each has its own tests for it). Gradle builds take minutes on this PC; the emulator
+  is slow without a GPU, so device checks use the owner's phone over USB. Clean room: no
+  Android download manager was studied.
