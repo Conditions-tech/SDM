@@ -54,6 +54,7 @@ session), not that the feature was studied in full.
 | Button over videos in the browser | Tested | M13 | ADR-0021: opt-in (page access asked by the panel's switch), a real click sends the page as a video; extension tests and `video_button_check.mjs` in headless Chrome and Edge. The owner reported it working on a video page with 1.2.0 (2026-10-26). IDM's similar panel not studied (clean room) |
 | Extension shipped with SDM, guided install | Tested | M13 | ADR-0021: `SDM\extension` plus the assistant's "Add to Chrome/Edge/Brave" (three steps); `test_extension_setup.py`. Fully automatic install needs a paid store listing ($0 rule) |
 | Public releases (GitHub Actions) | Tested | M11 | `.github/workflows`: checks on every push; a version tag publishes installer, portable zip, Chromium zip and SHA-256 sums (1.0.0-1.0.2 published). No in-app update check |
+| Android app | Implemented (partial) | M14 | ADR-0022: Kotlin/Compose, Android 10+. M14a project and logo; M14b engine (policy, names, single connection, retries) with 39 JVM tests against a local MockWebServer. No screens for downloads yet (M14d). IDM has no Android version to compare; no Android download manager was studied (clean room) |
 
 Target milestones are a first guess from the roadmap. They can move once features are
 investigated.

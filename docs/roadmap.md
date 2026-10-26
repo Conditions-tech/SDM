@@ -519,6 +519,10 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
 - M14b: the engine's safety parts and a single-connection download: network policy (ADR-0007,
   ADR-0017), file names and no overwriting (ADR-0008), hand-followed redirects without
   https-to-http (ADR-0015), errors and retries; tests against a local MockWebServer.
+  Done on 2026-10-26: `Urls`, `NetworkPolicy` + `PolicyDns` + a check of the connected
+  socket, `FileNames`, `PartFiles` (claim-then-move, never overwriting) and `HttpDownloader`
+  (OkHttp 5.5.1, coroutines, cancellable mid-read). 39 engine tests, three full runs in a row
+  passed (about 6-16 s each); breaking the loopback rule on purpose failed 6 of them.
 - M14c: resume (ADR-0011) and splitting over up to 8 connections (ADR-0012).
 - M14d: the app: Add URL, the list, a foreground service with a progress notification, the
   SQLite history, saving to Download/SDM through MediaStore.

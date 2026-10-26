@@ -9,6 +9,8 @@ while SDM is in 0.x.
 - M14 started: SDM for Android (ADR-0022). M14a: the `android/` Gradle project (Kotlin,
   Jetpack Compose, Android 10+) with the hexagon logo; a debug APK builds and GitHub Actions
   builds it on every push.
+- M14b: the Android download engine: the same URL, network-policy and file-name rules as
+  the Windows app, a single-connection download with retries and cancel, 39 tests.
 - M13 marked done: the owner reported the 1.2.0 checks done (install, the new icon, adding
   the extension with the assistant, the button over videos, a normal link opening SDM). This
   also closes the install checks left open in M11 and M12 (roadmap).

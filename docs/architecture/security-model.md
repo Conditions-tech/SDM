@@ -66,6 +66,25 @@ resolve the hex form (`test_disguised_spellings_of_this_computer_never_reach_it`
 - A server that sends no `Content-Length` and closes early is indistinguishable from a
   complete download (inherent to HTTP). Integrity checks (M9) can help when a checksum is known.
 
+## Android app (M14, ADR-0022)
+
+The Android engine (`android/engine`) applies the same rules with its own code and tests:
+
+- Protocols, credentials and https-to-http redirects: `Urls.validate` and the downloader's
+  hand-followed redirects (at most 10, each hop re-checked).
+- Destinations (ADR-0007, ADR-0017): `NetworkPolicy` for IP literals before each request,
+  `PolicyDns` inside OkHttp's lookup, and a network interceptor that checks the address the
+  socket actually connected to (a safety net the Windows engine doesn't have). System proxies
+  are ignored (`Proxy.NO_PROXY`). On a phone, "local network" means the Wi-Fi's devices and
+  the router; they are blocked as on Windows.
+- File names (ADR-0008): `FileNames.sanitize` keeps the Windows rules (files go to PCs and
+  FAT/exFAT cards) and limits names to 200 UTF-8 bytes (Android allows 255). The final name
+  is claimed with an atomic create before the partial file is moved over it, because a POSIX
+  rename would replace an existing file.
+- Tests: `NetworkPolicyTest`, `UrlsTest`, `FileNamesTest`, `HttpDownloaderTest` (local
+  MockWebServer only). A deliberate break of the loopback rule failed 6 of them (2026-10-26).
+- A fix to a safety rule must be made in both engines.
+
 ## Environment notes
 
 - Windows Controlled Folder Access is on. A blocked write surfaces in Python as
