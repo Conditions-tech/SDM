@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window behind the Compose screens; Compose draws everything else. -->
+    <style name="Theme.SDM" parent="android:Theme.Material.Light.NoActionBar" />
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>

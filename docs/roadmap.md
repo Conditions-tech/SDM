@@ -511,6 +511,11 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
 
 - M14a: ADR-0022; the `android/` Gradle project (`engine` Kotlin/JVM module, `app` Compose
   app) with the hexagon logo; a debug APK builds; tests run; a GitHub Actions job builds it.
+  Checked on 2026-10-26: `gradlew :engine:test :app:assembleDebug` passed in 1 min 34 s on
+  this PC (3 engine tests); the APK reports `io.github.conditionstech.sdm` 0.1.0, minSdk 29,
+  only the INTERNET permission (`aapt2 dump badging`). The emulator could not start: it needs
+  Windows' Android Emulator hypervisor driver, which is not installed (a system change, so
+  left to the owner); device checks use the owner's phone. Not checked: the job on GitHub.
 - M14b: the engine's safety parts and a single-connection download: network policy (ADR-0007,
   ADR-0017), file names and no overwriting (ADR-0008), hand-followed redirects without
   https-to-http (ADR-0015), errors and retries; tests against a local MockWebServer.

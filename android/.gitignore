@@ -1,0 +1,13 @@
+# Gradle and Android Studio
+.gradle/
+.kotlin/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+
+# Signing keys never go into Git (ADR-0022): the release key is a GitHub secret.
+*.jks
+*.keystore
+keystore.properties

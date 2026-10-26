@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher icon's foreground: sdm_logo.xml's paths scaled into the 66 dp safe circle of a
+     108 dp adaptive icon (scale 0.28: the hexagon becomes 66 units tall, centred). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.28"
+        android:scaleY="0.28"
+        android:translateX="18.16"
+        android:translateY="18.16">
+        <path
+            android:pathData="M128,10 L230,69 V187 L128,246 L26,187 V69 Z"
+            android:strokeWidth="12"
+            android:strokeLineJoin="round">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:endX="256"
+                    android:endY="256"
+                    android:startX="0"
+                    android:startY="0"
+                    android:type="linear">
+                    <item android:color="#4F46E5" android:offset="0" />
+                    <item android:color="#0EA5E9" android:offset="1" />
+                </gradient>
+            </aapt:attr>
+            <aapt:attr name="android:strokeColor">
+                <gradient
+                    android:endX="256"
+                    android:endY="256"
+                    android:startX="0"
+                    android:startY="0"
+                    android:type="linear">
+                    <item android:color="#4F46E5" android:offset="0" />
+                    <item android:color="#0EA5E9" android:offset="1" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:pathData="M128,64 V172"
+            android:strokeWidth="30"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M80,128 L128,176 L176,128"
+            android:strokeWidth="30"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M84,204 H172"
+            android:strokeAlpha="0.85"
+            android:strokeWidth="18"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round" />
+    </group>
+</vector>
