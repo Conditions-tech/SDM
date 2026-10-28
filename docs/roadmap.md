@@ -522,3 +522,10 @@ The owner's own check (follow the four steps in Chrome) is still to do.
 **Released as 1.2.1 on 2026-10-27** with both fixes above (tag `v1.2.1`; the release workflow
 builds and publishes the files). The owner's check as a user (uninstall, install 1.2.1 from
 GitHub, add the extension, a link reaching SDM, reinstall again) is still to do.
+
+**Fix after 1.2.1 (2026-10-28): Telegram Web downloads.** Two downloads from Telegram Web
+(`https://web.telegram.org/k/d/<number>`) went to SDM and failed. A direct request for such an
+address got a redirect to Telegram Web's HTML page, not a file: the page makes the file itself
+for the signed-in user. The extension's capture now leaves `web.telegram.org` to the browser
+(`PAGE_MADE_HOSTS` in `extension/chrome/capture.js`; regression test in `capture.test.js`).
+Not released yet.

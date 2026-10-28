@@ -61,8 +61,9 @@ download and SDM asks you to confirm it. To turn it off (or on again), click SDM
 icon (pin it from the puzzle-piece menu if you don't see it) and untick (or tick) **Send my
 downloads to SDM**; right-click still works while it's off.
 
-Private (incognito) windows, `blob:` downloads and files below the minimum size (set in the
-same panel) stay in the browser. If SDM can't take a download, the browser downloads it as
+Private (incognito) windows, `blob:` downloads, files below the minimum size (set in the
+same panel) and downloads from Telegram Web (`web.telegram.org`, whose files only exist inside
+its open tab) stay in the browser. If SDM can't take a download, the browser downloads it as
 usual, once.
 
 - **Chromium browsers** capture before their "Save As" window appears.

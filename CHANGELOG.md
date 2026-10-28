@@ -6,6 +6,13 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Telegram Web downloads failed in SDM** (reported by the owner, 2026-10-28). Telegram Web
+  builds each file inside its open tab and gives the browser an address only that tab can
+  answer; asked directly, `web.telegram.org/k/d/...` redirects to the app's HTML page. The
+  extension now leaves downloads from `web.telegram.org` to the browser.
+
 ## [1.2.1] - 2026-10-27
 
 ### Fixed

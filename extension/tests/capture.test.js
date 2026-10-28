@@ -40,6 +40,25 @@ test("incognito, finished and non-web downloads stay in Chrome", () => {
   }
 });
 
+test("Telegram Web's downloads stay in Chrome: only its open tab can make the file", () => {
+  // The owner's report (2026-10-28): both went to SDM and failed.
+  for (const url of [
+    "https://web.telegram.org/k/d/787855911",
+    "https://web.telegram.org/any/other/path", // the whole site, whichever version
+    "https://WEB.TELEGRAM.ORG/z/d/1",
+  ]) {
+    assert.equal(reasonToSkip(item({ url }), { ownId: OWN_ID }), "made inside the page");
+  }
+  // Only that exact site: look-alikes and other Telegram addresses are ordinary downloads.
+  for (const url of [
+    "https://web.telegram.org.example.com/k/d/1",
+    "https://example.com/web.telegram.org/k/d/1",
+    "https://telegram.org/dl/desktop/win64",
+  ]) {
+    assert.equal(reasonToSkip(item({ url }), { ownId: OWN_ID }), null);
+  }
+});
+
 test("the minimum size applies only when Chrome already knows the size", () => {
   const small = item({ totalBytes: 500_000 });
   assert.equal(reasonToSkip(small, { minMegabytes: 1, ownId: OWN_ID }), "smaller than the minimum");
