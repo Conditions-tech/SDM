@@ -23,7 +23,7 @@ export function menuItem() {
   return {
     id: MENU_ID,
     title: "Download with SDM",
-    contexts: ["link", "video", "audio"],
+    contexts: ["link", "image", "video", "audio"],
     // Applies to the link's or the player's address: blob: and data: players never match.
     targetUrlPatterns: ["http://*/*", "https://*/*"],
   };
@@ -90,7 +90,8 @@ export function videoMessage(pageUrl) {
 // the click was on video or audio, or the link's. The page (or frame) becomes the referrer.
 export function menuMessage(info) {
   if (info.menuItemId === VIDEO_MENU_ID) return videoMessage(info.pageUrl);
-  const onMedia = info.mediaType === "video" || info.mediaType === "audio";
+  // An image counts too (M15: pictures on Instagram, Pinterest...), even inside a link.
+  const onMedia = ["image", "video", "audio"].includes(info.mediaType);
   const url = onMedia && info.srcUrl ? info.srcUrl : info.linkUrl;
   return messageFor(url, { referrer: info.frameUrl || info.pageUrl, source: "menu" });
 }
