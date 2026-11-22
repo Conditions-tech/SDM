@@ -1,5 +1,5 @@
-# Pushing a tag like v1.0.0 builds the installer and the extension packages, and publishes
-# them as a GitHub release with their SHA-256 checksums (M11, ADR-0019).
+# Pushing a tag like v1.0.0 builds the installer and the extension, and publishes them in
+# one zip as a GitHub release with its SHA-256 checksum (M11, ADR-0019).
 # Actions are pinned to full commit SHAs (the tag is in the comment), so a moved tag can't
 # change what runs.
 name: Release
@@ -39,23 +39,24 @@ jobs:
           }
       - run: uv run python scripts/build_release.py --installer
       - run: uv run python scripts/build_extensions.py
-      - name: Collect the files and their checksums
+      - name: Pack one zip (installer + extension) and its checksum
         shell: pwsh
         run: |
-          New-Item -ItemType Directory dist/release | Out-Null
-          Copy-Item "dist/SDM-Setup-$env:VERSION.exe" dist/release/
-          Compress-Archive -Path dist/SDM -DestinationPath "dist/release/SDM-$env:VERSION-portable.zip"
-          # Only the Chromium zip: Edge and Firefox users get the extension from their stores
-          # (ADR-0019); build_extensions.py makes the store zips for the owner to submit.
-          Copy-Item "dist/extension/sdm-chromium-$env:VERSION.zip" dist/release/
-          $sums = Get-ChildItem dist/release | ForEach-Object {
+          # The owner's choice (2026-11-22): one download. Inside: the installer and the
+          # Chromium extension (the installer also carries it). Edge and Firefox use the stores.
+          New-Item -ItemType Directory dist/bundle, dist/release | Out-Null
+          Copy-Item "dist/SDM-Setup-$env:VERSION.exe" dist/bundle/
+          Copy-Item "dist/extension/sdm-chromium-$env:VERSION.zip" dist/bundle/
+          $inner = Get-ChildItem dist/bundle | ForEach-Object {
             "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
           }
-          $sums | Set-Content -Encoding utf8 dist/release/SHA256SUMS.txt
-          Get-Content packaging/release-notes.md | Set-Content -Encoding utf8 dist/notes.md
-          Add-Content -Encoding utf8 dist/notes.md "", "## SHA-256 checksums", "", '```'
-          Add-Content -Encoding utf8 dist/notes.md $sums
-          Add-Content -Encoding utf8 dist/notes.md '```'
+          $inner | Set-Content -Encoding utf8 dist/bundle/SHA256SUMS.txt
+          $zip = "dist/release/SDM-$env:VERSION.zip"
+          Compress-Archive -Path dist/bundle/* -DestinationPath $zip
+          $sum = "$((Get-FileHash $zip -Algorithm SHA256).Hash.ToLower())  SDM-$env:VERSION.zip"
+          (Get-Content packaging/release-notes.md) -replace '<version>', $env:VERSION |
+            Set-Content -Encoding utf8 dist/notes.md
+          Add-Content -Encoding utf8 dist/notes.md "", "## SHA-256 checksum", "", '```', $sum, '```'
       - name: Publish the release
         shell: pwsh
         env:

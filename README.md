@@ -43,8 +43,9 @@ download manager.
 
 ## Install
 
-1. Download `SDM-Setup-<version>.exe` from the [latest release](../../releases/latest).
-2. Run it. Windows SmartScreen may say "Windows protected your PC", because SDM isn't
+1. Download `SDM-<version>.zip` from the [latest release](../../releases/latest), unzip it
+   and run `SDM-Setup-<version>.exe`.
+2. Windows SmartScreen may say "Windows protected your PC", because SDM isn't
    code-signed (signing costs money): click **More info**, then **Run anyway**.
 3. SDM installs for your Windows account only (no administrator rights) and appears in the
    Start menu. Uninstall it from Windows **Settings > Apps**; your history and downloads stay.

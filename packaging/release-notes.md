@@ -1,6 +1,7 @@
 ## Install
 
-1. Download **SDM-Setup-<version>.exe** below and run it. It installs for your Windows account
+1. Download **SDM-<version>.zip** below and unzip it (right-click > Extract All). Run
+   **SDM-Setup-<version>.exe** from it. It installs for your Windows account
    only and needs no administrator rights. Windows SmartScreen may warn that the publisher is
    unknown (SDM isn't code-signed): choose **More info**, then **Run anyway**.
 2. SDM's welcome assistant connects your browsers. For each one, press **Add to Chrome** (or
@@ -15,8 +16,8 @@ Optional, for converting and video pages (both free; then restart SDM):
 `winget install Gyan.FFmpeg` and `winget install yt-dlp.yt-dlp`. Video pages are off until
 you turn them on in Tools > Settings > Media.
 
-No installer wanted? **SDM-<version>-portable.zip** is the same program as a folder: unzip it
-and run `SDM.exe`. **sdm-chromium-<version>.zip** is the extension on its own.
+The zip also holds **sdm-chromium-<version>.zip** (the extension on its own) and
+**SHA256SUMS.txt** (the checksums of both files).
 
-Check a download: `Get-FileHash .\SDM-Setup-<version>.exe` in PowerShell must print the
+Check the download: `Get-FileHash .\SDM-<version>.zip` in PowerShell must print the
 checksum listed below.
