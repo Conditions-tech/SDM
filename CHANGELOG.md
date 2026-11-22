@@ -6,6 +6,8 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-11-22
+
 ### Added
 
 - **HTTP proxy (optional, off by default):** Settings > Connections can send downloads and
