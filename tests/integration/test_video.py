@@ -317,3 +317,12 @@ def test_audio_that_couldnt_be_converted_is_not_called_done(qtbot, videos, monke
     assert "couldn't be turned into MP3" in error and "winget install Gyan.FFmpeg" in error
     assert not any(p.suffix == ".webm" for p in folder.iterdir())  # nothing half-done in Downloads
     assert (folder / f".sdm-video-{record.id}").exists()  # kept: Retry converts it
+
+
+def test_converting_to_mp3_is_shown(qtbot, videos):
+    controller, folder = videos
+    stages = []
+    controller._videos.stage.connect(lambda i, text: stages.append(text))
+    record = controller.add(PAGE, folder, video="mp3")
+    wait_for(qtbot, controller, record.id, DownloadState.COMPLETED)
+    assert any(text.startswith("Converting to MP3") for text in stages)

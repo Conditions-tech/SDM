@@ -40,6 +40,7 @@ class _Row:
     speed: float | None = None  # bytes per second, while downloading
     time_left: float | None = None  # seconds, while downloading with a known size
     connections: int = 1  # while downloading (M5)
+    stage: str = ""  # a video's step after downloading: "Converting to MP3…", "Merging…"
 
 
 # M13: the Status column's colour by outcome, for the light and the dark look. Each meets
@@ -93,6 +94,8 @@ class DownloadTableModel(QAbstractTableModel):
             return None
         row = self._rows[index.row()]
         if role == Qt.ItemDataRole.DisplayRole:
+            if row.stage and index.column() == STATUS:
+                return row.stage
             return cell_text(row.record, index.column(), row.speed, row.time_left, row.connections)
         if role == Qt.ItemDataRole.ToolTipRole:
             return _tooltip(row.record, index.column())
@@ -132,6 +135,7 @@ class DownloadTableModel(QAbstractTableModel):
         if record.state != DownloadState.DOWNLOADING:
             row.speed = row.time_left = None
             row.connections = 1
+            row.stage = ""
         self._changed(position)
 
     def set_live(
@@ -149,6 +153,18 @@ class DownloadTableModel(QAbstractTableModel):
         row = self._rows[position]
         row.record = replace(row.record, received_bytes=received, total_bytes=total)
         row.speed, row.time_left, row.connections = speed, time_left, connections
+        row.stage = ""
+        self._changed(position)
+
+    def set_stage(self, download_id: int, text: str) -> None:
+        """The owner's report (2026-11-22): converting a long recording to MP3 takes minutes
+        with no bytes arriving, and the row looked stuck at its last speed. Say what's
+        happening instead, with no speed or time left."""
+        position = self._position(download_id)
+        if position is None or self._rows[position].record.state != DownloadState.DOWNLOADING:
+            return
+        row = self._rows[position]
+        row.stage, row.speed, row.time_left = text, None, None
         self._changed(position)
 
     def remove(self, download_id: int) -> None:

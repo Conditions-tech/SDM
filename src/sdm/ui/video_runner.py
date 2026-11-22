@@ -87,10 +87,17 @@ def _display_name(part_name: str, quality_key: str) -> str:
     return stem + extension
 
 
+STAGE_TEXT = {
+    "converting": "Converting to {kind}… (long recordings take minutes)",
+    "merging": "Merging video and audio…",
+}
+
+
 class VideoRunner(QObject):
     # The engine's event types. Connect it queued, as the engine's events arrive: the
     # controller then never handles an event in the middle of starting a download.
     event = Signal(object)
+    stage = Signal(int, str)  # download id, what yt-dlp does after downloading
     _resolved = Signal(int, object)  # lookup thread -> main thread: addresses or an error
 
     def __init__(self, parent=None) -> None:
@@ -199,7 +206,11 @@ class VideoRunner(QObject):
         )
         *lines, job.rest = text.replace("\r", "\n").split("\n")
         for line in lines:
+            before = job.progress.stage
             kind = job.progress.line(line)
+            if job.progress.stage != before and job.progress.stage in STAGE_TEXT:
+                kind_name = (job.record.video or "").upper()
+                self.stage.emit(download_id, STAGE_TEXT[job.progress.stage].format(kind=kind_name))
             if kind == "part" and job.progress.part_name:
                 name = _display_name(job.progress.part_name, job.record.video or "")
                 self._deliver(FileInfo(download_id, name, None))

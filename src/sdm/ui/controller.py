@@ -139,6 +139,7 @@ class DownloadController(QObject):
         # Video pages (M12b) run in yt-dlp but report like the engine (VideoRunner).
         self._videos = VideoRunner(self)
         self._videos.event.connect(self._on_event, Qt.ConnectionType.QueuedConnection)
+        self._videos.stage.connect(self.model.set_stage, Qt.ConnectionType.QueuedConnection)
 
     # ----- lifecycle -----
 
