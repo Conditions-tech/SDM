@@ -61,6 +61,21 @@ test("a page that already is one post is kept, and other sites' links are ignore
   const watch = "https://www.youtube.com/watch?v=abc";
   assert.equal(postAddress(watch, []), watch);
   const feed = "https://www.facebook.com/";
-  assert.equal(postAddress(feed, ["https://evil.example/video/1"]), feed);
-  assert.equal(postAddress(feed, []), feed);
+  // a home feed with no post around the video is not sent (it can only fail)
+  assert.equal(postAddress(feed, ["https://evil.example/video/1"]), null);
+  assert.equal(postAddress(feed, []), null);
+  const page = "https://news.example/story-about-cats";
+  assert.equal(postAddress(page, []), page);
+});
+
+test("Facebook's feed posts count as posts (the owner's report, 2026-11-22)", () => {
+  const feed = "https://www.facebook.com/";
+  for (const post of [
+    "https://www.facebook.com/someone/posts/pfbid0abc",
+    "https://www.facebook.com/permalink.php?story_fbid=1&id=2",
+    "https://www.facebook.com/share/v/1AbC/",
+    "https://www.facebook.com/someone/videos/123/",
+  ]) {
+    assert.equal(postAddress(feed, ["https://www.facebook.com/someone", post]), post);
+  }
 });

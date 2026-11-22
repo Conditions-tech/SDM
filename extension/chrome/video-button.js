@@ -31,7 +31,10 @@
   // M15: on a feed (TikTok's For You, a profile, a board of pins) the page's address is a
   // list, not one video, so yt-dlp finds nothing. The video's own post usually links from
   // around the player: use the first link that looks like one post on the same site.
-  const POST = /\/(video|videos|reel|reels|p|pin|shorts|watch|status|story)(\/|\?|$)/;
+  // Facebook (the owner's report, 2026-11-22): a home-feed video sent "facebook.com/", so its
+  // posts ("/posts/", "/permalink.php", "/story.php", "/share/v/") count as posts too.
+  const POST =
+    /\/(video|videos|reel|reels|p|pin|shorts|watch|status|story|posts|share\/[vr]|permalink\.php|story\.php)(\/|\?|$)/;
 
   function looksLikePost(url) {
     try {
@@ -50,7 +53,8 @@
       const host = new URL(link).hostname;
       if (host === site || host.endsWith("." + site)) return link;
     }
-    return pageUrl;
+    // A site's home page is a feed, never one video: say so instead of sending it to fail.
+    return new URL(pageUrl).pathname === "/" ? null : pageUrl;
   }
 
   function linksAround(element) {
@@ -161,12 +165,14 @@
   send.addEventListener("click", async (event) => {
     event.stopPropagation();
     if (!event.isTrusted) return; // only a real click by the user
+    const url = video ? postAddress(location.href, linksAround(video)) : location.href;
+    if (!url) {
+      text.textContent = "Open the video first (click its date or the video)";
+      return;
+    }
     text.textContent = "Sending…";
     try {
-      const reply = await chrome.runtime.sendMessage({
-        type: "sdm-video",
-        url: video ? postAddress(location.href, linksAround(video)) : location.href,
-      });
+      const reply = await chrome.runtime.sendMessage({ type: "sdm-video", url });
       text.textContent = reply?.ok ? "Sent to SDM" : "SDM: " + (reply?.text ?? "not reached");
     } catch {
       text.textContent = "Reload the page"; // the extension was updated or removed meanwhile
