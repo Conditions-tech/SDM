@@ -36,3 +36,11 @@ def test_login_problems_in_plain_words():
     assert "Close that browser" in locked
     protected = explain_failure(["ERROR: Failed to decrypt with DPAPI. See ..."])
     assert "Firefox" in protected
+
+
+def test_youtube_without_a_javascript_runtime_says_to_install_deno():
+    for line in (
+        "ERROR: [youtube] abc: No supported JavaScript runtime could be found.",
+        "WARNING: [youtube] abc: n challenge solving failed: Some formats may be missing",
+    ):
+        assert "winget install DenoLand.Deno" in explain_failure([line])

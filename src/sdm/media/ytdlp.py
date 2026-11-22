@@ -216,7 +216,17 @@ LOGIN_ENCRYPTED_TEXT = (
     "Settings > Media, choose Firefox for video-page logins (log in to the site in Firefox)."
 )
 
+# Since late 2025 yt-dlp needs a JavaScript runtime (Deno) to read YouTube's pages; without one
+# YouTube downloads fail in every format, MP3 included.
+NEEDS_DENO_TEXT = (
+    "YouTube needs a helper program that yt-dlp uses: install it for free with "
+    "winget install DenoLand.Deno, then restart SDM and try again."
+)
+
 _EXPLAINED = (
+    ("JavaScript runtime", NEEDS_DENO_TEXT),
+    ("js runtime", NEEDS_DENO_TEXT),
+    ("challenge solving failed", NEEDS_DENO_TEXT),
     ("Could not copy", LOGIN_LOCKED_TEXT),
     ("cookie database", LOGIN_LOCKED_TEXT),
     ("DPAPI", LOGIN_ENCRYPTED_TEXT),
