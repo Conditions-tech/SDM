@@ -6,6 +6,20 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-22
+
+### Changed
+
+- **One download:** each release is a single `SDM-<version>.zip` holding the installer, the
+  Chromium extension and their checksums.
+
+### Fixed
+
+- **Facebook feed videos** (the owner's report, 2026-11-22): the SDM button sent
+  `facebook.com/`, which holds no single video. It now finds the post's own address
+  (`/posts/`, `/videos/`, `/share/v/`, `permalink.php`); on a home feed with no post nearby it
+  says "Open the video first" instead of sending a download that can only fail.
+
 ## [1.3.0] - 2026-11-22
 
 ### Added
