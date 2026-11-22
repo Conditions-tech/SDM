@@ -48,6 +48,15 @@ headers.
 Fixtures: `fetch(url, ...)` runs one download into `tmp_path`, with loopback allowed (the
 default policy blocks the test server, as it should) and short timeouts.
 
+## Android engine (M14)
+
+`cd android; .\gradlew.bat :engine:test` runs the Kotlin engine's JVM tests on the PC
+(about 6 s, no emulator). Each test starts OkHttp's MockWebServer on 127.0.0.1;
+`RangeFileServer` serves one file with `Range`/`If-Range` and can misbehave on request (ignore
+ranges, send the wrong range, ignore `If-Range`, throttle, drop a reply halfway).
+`pauseMidway` pauses a real download by cancelling it, as the app will. The shared checks
+(policy, names) mirror the Python tests case for case.
+
 ## Rules
 
 - Time-dependent behavior (schedule, retry times) takes an injectable clock: tests move a

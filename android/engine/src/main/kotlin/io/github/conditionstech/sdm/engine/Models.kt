@@ -11,6 +11,12 @@ data class DownloadSettings(
     val maxRetryAfterMs: Long = 60_000, // cap on a server's Retry-After request
     val maxRedirects: Int = 10,
     val chunkSize: Int = 64 * 1024,
+    // Splitting a download across connections (M14c, ADR-0012, as on Windows).
+    val maxConnections: Int = 8,
+    val minSplitSize: Long = 2L * 1024 * 1024, // smaller files use one connection
+    val minPartSize: Long = 1024L * 1024,
+    val dynamicSplitting: Boolean = true, // free connections take over half of the biggest part
+    val snapshotEveryMs: Long = 1_000, // how often a split download's parts map is saved
     val userAgent: String = "SDM (Android)",
 )
 
@@ -35,4 +41,13 @@ interface DownloadListener {
 
     /** After each chunk; [totalBytes] is null when the size is unknown. */
     fun onProgress(receivedBytes: Long, totalBytes: Long?) {}
+
+    /**
+     * What is needed to resume, each time it changes: once an attempt has its partial file,
+     * and about once a second while a split download runs (only bytes already on disk).
+     */
+    fun onPartial(partial: PartialDownload) {}
+
+    /** How many connections are downloading right now (split downloads). */
+    fun onConnections(count: Int) {}
 }

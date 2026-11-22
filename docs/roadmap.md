@@ -524,6 +524,13 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
   (OkHttp 5.5.1, coroutines, cancellable mid-read). 39 engine tests, three full runs in a row
   passed (about 6-16 s each); breaking the loopback rule on purpose failed 6 of them.
 - M14c: resume (ADR-0011) and splitting over up to 8 connections (ADR-0012).
+  Done on 2026-11-22: `Segments` (plan, saved map in the Windows format, dynamic splitting,
+  Content-Range), resume in `HttpDownloader` (Range + If-Range, the 64-byte overlap check, 416,
+  start over on anything untrusted, `keepPartial` for pause), and `SegmentedDownload` (first
+  connection + exact-206 parts, fallback, per-part retries, dynamic splitting, the parts map
+  saved after a disk sync). 69 engine tests, eight full runs in a row passed (about 6 s each).
+  Breaking five checks on purpose (part range, resume range, overlap, version tags on parts and
+  on resume) each failed a test; the first try found two weak tests, which were strengthened.
 - M14d: the app: Add URL, the list, a foreground service with a progress notification, the
   SQLite history, saving to Download/SDM through MediaStore.
 - M14e: Share → SDM (Android's share menu) and the queue limit.

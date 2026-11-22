@@ -81,8 +81,14 @@ The Android engine (`android/engine`) applies the same rules with its own code a
   FAT/exFAT cards) and limits names to 200 UTF-8 bytes (Android allows 255). The final name
   is claimed with an atomic create before the partial file is moved over it, because a POSIX
   rename would replace an existing file.
-- Tests: `NetworkPolicyTest`, `UrlsTest`, `FileNamesTest`, `HttpDownloaderTest` (local
-  MockWebServer only). A deliberate break of the loopback rule failed 6 of them (2026-10-26).
+- Resume and splitting (ADR-0011, ADR-0012): only an exact `206` with the same version tags
+  continues a file; a saved parts map is checked against the partial file before use, and a
+  partial-file path from the history is used only if it is a `.sdmpart` directly inside the
+  download folder (`isOwnPartFile`).
+- Tests: `NetworkPolicyTest`, `UrlsTest`, `FileNamesTest`, `HttpDownloaderTest`,
+  `ResumeTest`, `SegmentedDownloadTest`, `SegmentsTest` (local MockWebServer only). Deliberate
+  breaks of the loopback rule (2026-10-26) and of five resume/split checks (2026-11-22) each
+  failed tests.
 - A fix to a safety rule must be made in both engines.
 
 ## Environment notes

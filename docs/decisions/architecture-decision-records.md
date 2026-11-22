@@ -666,3 +666,7 @@ deleted. A changed decision gets a new record that supersedes the old one.
   engines (each has its own tests for it). Gradle builds take minutes on this PC; the emulator
   is slow without a GPU, so device checks use the owner's phone over USB. Clean room: no
   Android download manager was studied.
+- **M14c note:** the split download runs its parts on several threads (Windows: one asyncio
+  thread), so the parts map and every write are guarded by one lock; a dynamic split can
+  never move a part's end while that part is writing. Writes go through one `FileChannel` at
+  each part's offset; the file is pre-sized with `setLength` (sparse on ext4/f2fs).
