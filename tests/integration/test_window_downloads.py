@@ -194,3 +194,46 @@ def test_unsafe_urls_are_refused_before_anything_is_saved(
     make_window(controller).add_download("ftp://example.com/x.zip", downloads)
     assert "Only http:// and https://" in shown[0]
     assert controller.store.list_all() == []
+
+
+def test_select_several_and_remove_with_their_files(
+    qtbot, make_controller, make_window, mock_server, downloads, monkeypatch
+):
+    # The owner's request (2026-11-22): select one or all, remove from the list and the PC.
+    for n in range(3):
+        mock_server.add(f"/r{n}.bin", mock_server.file(b"x" * 100))
+    controller = make_controller()
+    window = make_window(controller)
+    ids = [controller.add(mock_server.url(f"/r{n}.bin"), downloads).id for n in range(3)]
+    for i in ids:
+        wait_for_state(qtbot, controller, i, DownloadState.COMPLETED)
+    files = [Path(controller.store.get(i).path) for i in ids]
+
+    window.download_table.selectAll()
+    assert len(window.selected_records()) == 3 and window.remove_action.isEnabled()
+    asked = []
+    monkeypatch.setattr(window, "confirm_remove", lambda n, f: asked.append((n, f)) or None)
+    window.remove_action.trigger()  # cancelled: nothing changes
+    assert asked == [(3, 3)] and controller.model.rowCount() == 3
+
+    trashed = []
+    monkeypatch.setattr("sdm.ui.controller.QFile.moveToTrash", lambda p: trashed.append(p))
+    monkeypatch.setattr(window, "confirm_remove", lambda n, f: "files")
+    window.remove_action.trigger()
+    assert controller.model.rowCount() == 0
+    assert sorted(trashed) == sorted(str(f) for f in files)
+
+
+def test_remove_from_list_keeps_the_files(
+    qtbot, make_controller, make_window, mock_server, downloads, monkeypatch
+):
+    mock_server.add("/keep.bin", mock_server.file(b"x" * 100))
+    controller = make_controller()
+    window = make_window(controller)
+    record = controller.add(mock_server.url("/keep.bin"), downloads)
+    wait_for_state(qtbot, controller, record.id, DownloadState.COMPLETED)
+    path = Path(controller.store.get(record.id).path)
+    window.download_table.selectRow(0)
+    monkeypatch.setattr(window, "confirm_remove", lambda n, f: "list")
+    window.remove_action.trigger()
+    assert controller.model.rowCount() == 0 and path.is_file()

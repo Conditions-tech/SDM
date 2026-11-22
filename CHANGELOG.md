@@ -6,6 +6,18 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
+### Added
+
+- **Select several downloads** (Ctrl- or Shift-click, Ctrl+A or Downloads > Select all) and
+  remove them together; choose **Remove from list** (files stay) or **Remove and delete
+  files** (finished files go to the Recycle Bin).
+
+### Fixed
+
+- The Status column was cut off at the window's edge; it now has a fixed, readable width.
+- A video converting to MP3 (or merging) looked stuck at its last speed; its status now says
+  "Converting to MP3…" or "Merging video and audio…".
+
 ## [1.3.1] - 2026-11-22
 
 ### Changed

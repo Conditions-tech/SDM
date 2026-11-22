@@ -17,7 +17,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from PySide6.QtCore import QCoreApplication, QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QCoreApplication, QFile, QObject, Qt, QTimer, Signal
 
 from sdm.core.categories import GENERAL, category_for
 from sdm.core.checksums import CHECKING, MISMATCH, MISSING, VERIFIED, normalize_sha256, sha256_of
@@ -432,11 +432,15 @@ class DownloadController(QObject):
             self._delete_partial(record)
             self._move(download_id, self.store.mark_cancelled)
 
-    def remove(self, download_id: int) -> None:
-        """Remove an entry from the list. A finished file is kept; a partial file is deleted."""
+    def remove(self, download_id: int, *, delete_file: bool = False) -> None:
+        """Remove an entry from the list. A partial file is deleted; a finished file is kept,
+        or moved to the Recycle Bin with `delete_file` (only that exact file, never a folder)."""
         record = self.store.get(download_id)
         if record is not None and not record.state.is_active:
             self._delete_partial(record)
+            path = finished_file(record) if delete_file else None
+            if path is not None and path.is_file():
+                QFile.moveToTrash(str(path))
         self.store.remove(download_id)
         self.model.remove(download_id)
         self._emit_summary()
