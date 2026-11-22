@@ -6,6 +6,8 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-11-22
+
 ### Fixed
 
 - **Selecting with the mouse:** press in the empty space under the list and drag to draw a
