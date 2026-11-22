@@ -6,6 +6,12 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Selecting with the mouse:** press in the empty space under the list and drag to draw a
+  box, as in File Explorer; every row it touches is selected (Ctrl or Shift adds to the
+  selection).
+
 ## [1.3.2] - 2026-11-22
 
 ### Added

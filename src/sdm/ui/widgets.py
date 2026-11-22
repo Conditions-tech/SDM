@@ -3,7 +3,15 @@
 from datetime import datetime
 from urllib.parse import urlsplit
 
-from PySide6.QtCore import QModelIndex, QRect, Qt, Signal
+from PySide6.QtCore import (
+    QItemSelection,
+    QItemSelectionModel,
+    QModelIndex,
+    QRect,
+    QSize,
+    Qt,
+    Signal,
+)
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QApplication,
@@ -12,10 +20,12 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QRubberBand,
     QStyle,
     QStyledItemDelegate,
     QStyleOptionProgressBar,
     QStyleOptionViewItem,
+    QTableView,
     QVBoxLayout,
     QWidget,
 )
@@ -179,3 +189,58 @@ def _local(iso_utc: str | None) -> str:
         return datetime.fromisoformat(iso_utc).astimezone().strftime("%Y-%m-%d %H:%M")
     except ValueError:
         return ""
+
+
+class DownloadTable(QTableView):
+    """The download list, plus drag-to-select from empty space (the owner's report,
+    2026-11-22): like File Explorer, pressing below the rows and dragging draws a box and
+    selects every row it touches. Dragging that starts on a row is Qt's own range select."""
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._band = QRubberBand(QRubberBand.Shape.Rectangle, self.viewport())
+        self._origin = None
+        self._keep = False
+
+    def mousePressEvent(self, event) -> None:
+        point = event.position().toPoint()
+        if event.button() == Qt.MouseButton.LeftButton and not self.indexAt(point).isValid():
+            self._origin = point
+            mods = event.modifiers()
+            self._keep = bool(mods & (Qt.KeyboardModifier.ControlModifier
+                                      | Qt.KeyboardModifier.ShiftModifier))  # fmt: skip
+            if not self._keep:
+                self.clearSelection()
+            self._band.setGeometry(QRect(point, QSize()))
+            self._band.show()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:
+        if self._origin is None:
+            super().mouseMoveEvent(event)
+            return
+        box = QRect(self._origin, event.position().toPoint()).normalized()
+        self._band.setGeometry(box)
+        self.select_rows_in(box)
+
+    def mouseReleaseEvent(self, event) -> None:
+        if self._origin is None:
+            super().mouseReleaseEvent(event)
+            return
+        self._origin = None
+        self._band.hide()
+
+    def select_rows_in(self, box: QRect) -> None:
+        """Select every row the box (viewport coordinates) touches."""
+        model = self.model()
+        selection = QItemSelection()
+        for row in range(model.rowCount()):
+            top = self.rowViewportPosition(row)
+            if top + self.rowHeight(row) > box.top() and top < box.bottom():
+                selection.select(model.index(row, 0), model.index(row, model.columnCount() - 1))
+        flags = QItemSelectionModel.SelectionFlag.Rows | (
+            QItemSelectionModel.SelectionFlag.Select if self._keep
+            else QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )  # fmt: skip
+        self.selectionModel().select(selection, flags)

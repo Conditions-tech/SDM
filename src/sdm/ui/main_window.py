@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QSplitter,
     QSystemTrayIcon,
-    QTableView,
 )
 
 from sdm import __version__
@@ -42,7 +41,7 @@ from sdm.ui.settings_dialog import SettingsDialog, ask_video_terms
 from sdm.ui.setup_wizard import SetupWizard
 from sdm.ui.sidebar import DownloadFilter, Sidebar
 from sdm.ui.theme import apply_theme, colors_for
-from sdm.ui.widgets import DetailsPanel, ProgressDelegate
+from sdm.ui.widgets import DetailsPanel, DownloadTable, ProgressDelegate
 
 # Kept for existing imports: the columns of the download list, left to right.
 DOWNLOAD_COLUMNS = COLUMNS
@@ -98,7 +97,7 @@ class MainWindow(QMainWindow):
         # translated back to the model's rows with mapToSource.
         self.proxy = DownloadFilter(self)  # M13: chosen in the sidebar
         self.proxy.setSourceModel(controller.model)
-        self.download_table = QTableView(self)
+        self.download_table = DownloadTable(self)
         self.download_table.setModel(self.proxy)
         self.download_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.download_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)

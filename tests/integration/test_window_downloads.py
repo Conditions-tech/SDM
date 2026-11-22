@@ -2,11 +2,13 @@
 
 import hashlib
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QPoint, Qt
 
-from sdm.core.downloads import DownloadState
+from sdm.core.downloads import DownloadRecord, DownloadState
 from sdm.core.errors import InvalidURLError
 from sdm.storage.database import INTERRUPTED_MESSAGE, DownloadStore
 from sdm.ui import main_window as main_window_module
@@ -237,3 +239,48 @@ def test_remove_from_list_keeps_the_files(
     monkeypatch.setattr(window, "confirm_remove", lambda n, f: "list")
     window.remove_action.trigger()
     assert controller.model.rowCount() == 0 and path.is_file()
+
+
+def _finished(folder) -> DownloadRecord:
+    stamp = "2026-11-22T00:00:00+00:00"
+    return DownloadRecord(
+        id=100, url="https://example.com/a.bin", folder=str(folder), allow_local_network=False,
+        state=DownloadState.COMPLETED, file_name="a.bin", path=None, total_bytes=1,
+        received_bytes=1, verified_complete=True, error=None, created_at=stamp,
+        updated_at=stamp, finished_at=stamp,
+    )  # fmt: skip
+
+
+def _drag(qtbot, viewport, start, end):
+    from PySide6.QtCore import QEvent, QPoint
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtWidgets import QApplication
+
+    qtbot.mousePress(viewport, Qt.MouseButton.LeftButton, pos=start)
+    for y in range(start.y(), end.y(), 4 if end.y() > start.y() else -4):
+        point = QPoint(end.x(), y)
+        QApplication.sendEvent(viewport, QMouseEvent(
+            QEvent.Type.MouseMove, point, viewport.mapToGlobal(point), Qt.MouseButton.NoButton,
+            Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier))  # fmt: skip
+    qtbot.mouseRelease(viewport, Qt.MouseButton.LeftButton, pos=end)
+
+
+def test_dragging_the_mouse_selects_rows(qtbot, make_controller, make_window, downloads):
+    # The owner's report (2026-11-22): Ctrl+A worked but dragging with the mouse didn't.
+    controller = make_controller()
+    window = make_window(controller)
+    window.resize(1000, 600)
+    window.show()
+    qtbot.waitExposed(window)
+    for n in range(4):
+        controller.model.upsert(replace(_finished(downloads), id=100 + n, file_name=f"{n}.bin"))
+    table = window.download_table
+    first = table.visualRect(table.model().index(0, 1)).center()
+    last = table.visualRect(table.model().index(3, 1)).center()
+    _drag(qtbot, table.viewport(), first, last)  # starting on a row
+    assert len(window.selected_records()) == 4
+    table.clearSelection()
+    below = last + QPoint(0, 120)  # starting in the empty space under the rows
+    _drag(qtbot, table.viewport(), below, table.visualRect(table.model().index(2, 1)).center())
+    assert [r.id for r in window.selected_records()] == [102, 103]
+    assert window.remove_action.isEnabled()
