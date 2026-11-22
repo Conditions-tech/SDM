@@ -406,6 +406,7 @@ class DownloadController(QObject):
             command=command,
             ffmpeg=find_ffmpeg(self.preferences.ffmpeg_path),
             policy=self._policy_for(record),
+            login_browser=self.preferences.video_login_browser or None,
         )
 
     def resume_all(self) -> int:

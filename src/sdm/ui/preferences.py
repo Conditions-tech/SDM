@@ -7,7 +7,7 @@ bad row can never stop SDM from starting.
 from dataclasses import dataclass, fields
 
 from sdm.bridge.browsers import BY_KEY
-from sdm.media.ytdlp import QUALITIES
+from sdm.media.ytdlp import LOGIN_BROWSERS, QUALITIES
 from sdm.storage.database import DownloadStore
 
 MAX_SPEED_LIMIT_KIB = 1_000_000  # KB/s; about 1 GB/s, i.e. "no practical limit"
@@ -32,6 +32,7 @@ class Preferences:
     video_enabled: bool = False  # video-page downloads with yt-dlp, after the notice (M12b)
     ytdlp_path: str = ""  # "" = find yt-dlp like ffmpeg
     video_quality: str = "1080p"  # the quality chosen last time, offered first (M12)
+    video_login_browser: str = ""  # "" = no login; else a key of LOGIN_BROWSERS (M15, opt-in)
 
     @property
     def speed_limit_bytes(self) -> int | None:
@@ -56,6 +57,8 @@ class Preferences:
             BY_KEY.keys()
         ):
             values["browsers"] = default.browsers
+        if values["video_login_browser"] not in ("", *LOGIN_BROWSERS):
+            values["video_login_browser"] = ""
         if values["video_quality"] not in QUALITIES:
             values["video_quality"] = default.video_quality
         for name in ("default_folder", "last_folder", "ffmpeg_path", "ytdlp_path"):
