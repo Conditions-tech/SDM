@@ -6,7 +6,7 @@ import { test } from "node:test";
 import vm from "node:vm";
 
 const source = readFileSync(new URL("../chrome/video-button.js", import.meta.url), "utf8");
-const sandbox = { __SDM_TEST__: {} };
+const sandbox = { __SDM_TEST__: {}, URL }; // URL: as in a browser
 sandbox.globalThis = sandbox;
 vm.runInNewContext(source, sandbox);
 const { bigEnough } = sandbox.__SDM_TEST__.videoButton;
@@ -40,4 +40,27 @@ test("a video mostly off-screen gets no button", () => {
 
 test("nothing is added to the page in test mode", () => {
   assert.equal(sandbox.__sdmVideoButton, undefined);
+});
+
+const postAddress = (...args) => sandbox.__SDM_TEST__.videoButton.postAddress(...args);
+
+test("on a feed, the button sends the video's own post, not the feed", () => {
+  const feed = "https://www.tiktok.com/foryou";
+  const post = "https://www.tiktok.com/@someone/video/7312345678901234567";
+  assert.equal(postAddress(feed, ["https://www.tiktok.com/@someone", post]), post);
+  // Pinterest: a board, and a pin around the video
+  assert.equal(
+    postAddress("https://www.pinterest.com/someone/recipes/", ["https://www.pinterest.com/pin/123456/"]),
+    "https://www.pinterest.com/pin/123456/",
+  );
+});
+
+test("a page that already is one post is kept, and other sites' links are ignored", () => {
+  const reel = "https://www.instagram.com/reel/AbC123/";
+  assert.equal(postAddress(reel, ["https://www.instagram.com/p/Other/"]), reel);
+  const watch = "https://www.youtube.com/watch?v=abc";
+  assert.equal(postAddress(watch, []), watch);
+  const feed = "https://www.facebook.com/";
+  assert.equal(postAddress(feed, ["https://evil.example/video/1"]), feed);
+  assert.equal(postAddress(feed, []), feed);
 });

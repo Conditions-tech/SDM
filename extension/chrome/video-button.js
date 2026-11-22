@@ -28,8 +28,46 @@
     };
   }
 
+  // M15: on a feed (TikTok's For You, a profile, a board of pins) the page's address is a
+  // list, not one video, so yt-dlp finds nothing. The video's own post usually links from
+  // around the player: use the first link that looks like one post on the same site.
+  const POST = /\/(video|videos|reel|reels|p|pin|shorts|watch|status|story)(\/|\?|$)/;
+
+  function looksLikePost(url) {
+    try {
+      const parsed = new URL(url);
+      return /^https?:$/.test(parsed.protocol) && POST.test(parsed.pathname + parsed.search);
+    } catch {
+      return false;
+    }
+  }
+
+  function postAddress(pageUrl, nearbyLinks) {
+    if (looksLikePost(pageUrl)) return pageUrl;
+    const site = new URL(pageUrl).hostname.split(".").slice(-2).join(".");
+    for (const link of nearbyLinks) {
+      if (!looksLikePost(link)) continue;
+      const host = new URL(link).hostname;
+      if (host === site || host.endsWith("." + site)) return link;
+    }
+    return pageUrl;
+  }
+
+  function linksAround(element) {
+    const found = [];
+    let node = element;
+    for (let level = 0; node && level < 8 && found.length < 40; level++, node = node.parentElement) {
+      if (node.tagName === "A" && node.href) found.push(node.href);
+      for (const a of node.querySelectorAll?.("a[href]") ?? []) {
+        if (found.length >= 40) break;
+        found.push(a.href);
+      }
+    }
+    return found;
+  }
+
   if (globalThis.__SDM_TEST__) {
-    globalThis.__SDM_TEST__.videoButton = { bigEnough, buttonPlace };
+    globalThis.__SDM_TEST__.videoButton = { bigEnough, buttonPlace, postAddress };
     return;
   }
   if (globalThis.__sdmVideoButton) return; // injected twice (turned on with the page open)
@@ -125,7 +163,10 @@
     if (!event.isTrusted) return; // only a real click by the user
     text.textContent = "Sending…";
     try {
-      const reply = await chrome.runtime.sendMessage({ type: "sdm-video", url: location.href });
+      const reply = await chrome.runtime.sendMessage({
+        type: "sdm-video",
+        url: video ? postAddress(location.href, linksAround(video)) : location.href,
+      });
       text.textContent = reply?.ok ? "Sent to SDM" : "SDM: " + (reply?.text ?? "not reached");
     } catch {
       text.textContent = "Reload the page"; // the extension was updated or removed meanwhile
