@@ -538,3 +538,14 @@ Claude's sandbox couldn't reach facebook.com). Stories need a login, which SDM n
 (ADR-0020). SDM's reason now says to open the video on its own page and that stories and
 private posts need a login (`NO_VIDEO_TEXT`, `LOGIN_TEXT` in `sdm.media.ytdlp`); extension
 README updated. Not released yet.
+
+## 1.3.0: web media fixes (2026-11-22)
+
+The owner's reports: YouTube MP3 arriving as .webm, and Telegram, WhatsApp, Facebook,
+Instagram, Pinterest and TikTok downloads failing; and an Edge Add-ons listing. Done: images in
+the right-click menu; the video button sends a post's own address on feeds; an opt-in browser
+login for video pages (the owner's choice, 2026-11-22); a format check so an unconverted MP3 is
+never "Completed" (regression test); a Deno hint for YouTube; Telegram Web left to the browser;
+the Edge Add-ons kit (`docs/store/edge-addons.md`). Not possible: Telegram and WhatsApp Web
+files exist only inside their tab (`blob:`). Not tested against the real sites (tests use local
+servers only): the owner checks them in 1.3.0.

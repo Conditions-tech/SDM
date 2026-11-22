@@ -6,7 +6,24 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-22
+
+### Added
+
+- **Download images with SDM:** right-click any picture (Instagram, Pinterest, any page) and
+  choose Download with SDM; a picture inside a link sends the picture.
+- **Login for video pages (optional, off by default):** Settings > Media can let yt-dlp use one
+  browser's login (Firefox works best) for videos that need it, such as Facebook and Instagram
+  posts. SDM explains when a browser is open or protects its login on Windows.
+- **The SDM button on feeds** (TikTok, Pinterest boards, profiles) sends the clicked video's own
+  post instead of the feed's address.
+- A clear hint when YouTube needs yt-dlp's helper: `winget install DenoLand.Deno`.
+- The Edge Add-ons kit: a privacy policy (`PRIVACY.md`), store texts and images.
+
 ### Fixed
+
+- **MP3 chosen, a .webm marked Completed** (the owner's report, 2026-11-22): when yt-dlp can't
+  convert the audio (no ffmpeg), SDM now says so and Retry converts it after installing ffmpeg.
 
 - **Telegram Web downloads failed in SDM** (reported by the owner, 2026-10-28). Telegram Web
   builds each file inside its open tab and gives the browser an address only that tab can
