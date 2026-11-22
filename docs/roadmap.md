@@ -529,3 +529,12 @@ address got a redirect to Telegram Web's HTML page, not a file: the page makes t
 for the signed-in user. The extension's capture now leaves `web.telegram.org` to the browser
 (`PAGE_MADE_HOSTS` in `extension/chrome/capture.js`; regression test in `capture.test.js`).
 Not released yet.
+
+**Fix after 1.2.1 (2026-10-28): Facebook videos.** Two video-page downloads failed: the
+address of Facebook's news feed (`https://www.facebook.com/`, where the owner pressed the video
+button) and a story. yt-dlp 2026.10.21 handled both with its generic extractor, not its
+Facebook one; on a page with no video it ends with "Unsupported URL" (checked on a local page;
+Claude's sandbox couldn't reach facebook.com). Stories need a login, which SDM never uses
+(ADR-0020). SDM's reason now says to open the video on its own page and that stories and
+private posts need a login (`NO_VIDEO_TEXT`, `LOGIN_TEXT` in `sdm.media.ytdlp`); extension
+README updated. Not released yet.

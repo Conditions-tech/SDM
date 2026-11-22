@@ -16,6 +16,7 @@ import pytest
 from sdm.core.downloads import DownloadRecord, DownloadState
 from sdm.engine.manager import Failed, Started
 from sdm.engine.policy import NetworkPolicy
+from sdm.media.ytdlp import NO_VIDEO_TEXT
 from sdm.ui.add_url_dialog import AddUrlDialog
 from sdm.ui.preferences import Preferences
 from sdm.ui.settings_dialog import SettingsDialog
@@ -86,7 +87,7 @@ def test_an_unsupported_page_fails_with_a_plain_reason(qtbot, videos, monkeypatc
     record = controller.add(PAGE, folder, video="720p")
     with qtbot.waitSignal(controller.download_failed, timeout=20000) as failed:
         pass
-    assert failed.args == [record.id, "yt-dlp doesn't know how to download from this page."]
+    assert failed.args == [record.id, NO_VIDEO_TEXT]
     assert state_of(controller, record.id) == DownloadState.FAILED
 
 

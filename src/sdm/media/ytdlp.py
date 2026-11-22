@@ -178,13 +178,27 @@ class VideoProgress:
         return explain_failure(self.log)
 
 
+# yt-dlp 2026.10.21 on a page with no video (SDM's local test page, 2026-10-28): "WARNING:
+# [generic] Falling back on generic information extractor", then "ERROR: Unsupported URL: …".
+# The owner met it with Facebook's feed and a story (2026-10-28): the button sends the address
+# of the page it is on, and a feed or list isn't one video's page.
+NO_VIDEO_TEXT = (
+    "SDM found no video on this page. If it's a feed or a list of posts, open the video on its "
+    "own page (click its date or title) and try again. Stories and private posts need a login, "
+    "which SDM doesn't use."
+)
+LOGIN_TEXT = (
+    "This video needs a login (stories, private posts and groups usually do). SDM doesn't "
+    "sign in to sites or use your browser's cookies."
+)
+
 _EXPLAINED = (
-    ("Unsupported URL", "yt-dlp doesn't know how to download from this page."),
+    ("Unsupported URL", NO_VIDEO_TEXT),
     ("Requested format is not available",
      "This video isn't available in the chosen quality. Try a lower one."),
     ("DRM", "This video is DRM-protected. SDM doesn't download protected videos."),
-    ("Sign in", "This video needs a login. SDM doesn't sign in to sites."),
-    ("login", "This video needs a login. SDM doesn't sign in to sites."),
+    ("Sign in", LOGIN_TEXT),
+    ("login", LOGIN_TEXT),
     ("Private video", "This video is private."),
     ("members-only", "This video is for paying members only."),
     ("ffmpeg is not installed",

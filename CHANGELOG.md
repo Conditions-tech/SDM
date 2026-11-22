@@ -12,6 +12,11 @@ while SDM is in 0.x.
   builds each file inside its open tab and gives the browser an address only that tab can
   answer; asked directly, `web.telegram.org/k/d/...` redirects to the app's HTML page. The
   extension now leaves downloads from `web.telegram.org` to the browser.
+- **A plain reason when a page has no video** (reported by the owner with Facebook's feed and
+  a story, 2026-10-28). The video button sends the address of the page it is on; on a feed
+  that is the feed's address, and yt-dlp finds no video there ("Unsupported URL"). SDM now
+  says to open the video on its own page, and that stories and private posts need a login,
+  instead of "yt-dlp doesn't know how to download from this page".
 
 ## [1.2.1] - 2026-10-27
 

@@ -54,6 +54,11 @@ SDM opens Add URL set to a video, at the quality you chose last time (720p, 1080
 audio). This uses SDM's video add-on (yt-dlp): if it's off, SDM asks once to turn it on. The
 extension only sends the page's address; it never reads the page.
 
+Use it on **the video's own page**. On a feed or a list of posts (Facebook's news feed, for
+example) the address is the feed's, and SDM finds no video there: open the video first (click
+its date or title), then try again. Stories, private posts and group videos need a login,
+which SDM doesn't use, so they can't be downloaded.
+
 ## Sending downloads to SDM
 
 This is on as soon as the extension is installed: it stops the browser's own copy of each new
