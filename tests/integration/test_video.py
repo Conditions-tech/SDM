@@ -305,3 +305,15 @@ def test_add_url_offers_video_pages_only_when_turned_on(qtbot, tmp_path):
     on.kind_box.setCurrentIndex(on.kind_box.findData("2160p"))
     assert on.video == "2160p"
     assert not on.sha256_edit.isEnabled()
+
+
+def test_audio_that_couldnt_be_converted_is_not_called_done(qtbot, videos, monkeypatch):
+    # Regression (the owner's report, 2026-11-22): MP3 chosen, a .webm marked Completed.
+    controller, folder = videos
+    monkeypatch.setenv("FAKE_YTDLP_MODE", "no-ffmpeg")
+    record = controller.add(PAGE, folder, video="mp3")
+    wait_for(qtbot, controller, record.id, DownloadState.FAILED)
+    error = controller.store.get(record.id).error
+    assert "couldn't be turned into MP3" in error and "winget install Gyan.FFmpeg" in error
+    assert not any(p.suffix == ".webm" for p in folder.iterdir())  # nothing half-done in Downloads
+    assert (folder / f".sdm-video-{record.id}").exists()  # kept: Retry converts it

@@ -50,6 +50,12 @@ from sdm.media.ytdlp import (
 
 log = logging.getLogger(__name__)
 MAX_MESSAGE_LENGTH = 300
+AUDIO_EXTENSIONS = {"mp3": ".mp3", "m4a": ".m4a"}  # what an audio-only choice must end as
+NOT_CONVERTED_TEXT = (
+    "The audio arrived but couldn't be turned into {kind}: yt-dlp needs ffmpeg for that. "
+    "Install it for free with winget install Gyan.FFmpeg, restart SDM, then press Retry "
+    "(the audio isn't downloaded again)."
+)
 
 
 @dataclass
@@ -209,6 +215,13 @@ class VideoRunner(QObject):
             self._stopped(job)
             return
         media = finished_media(job.work)
+        wanted = AUDIO_EXTENSIONS.get(job.record.video or "")
+        if wanted and media is not None and media.suffix.lower() != wanted:
+            # The owner's report (2026-11-22): MP3 chosen, a .webm "completed". yt-dlp got the
+            # audio but couldn't convert it (no ffmpeg). Never call that done; the work folder
+            # stays, so Retry after installing ffmpeg converts it without downloading again.
+            self._fail(download_id, NOT_CONVERTED_TEXT.format(kind=wanted[1:].upper()))
+            return
         if status == QProcess.ExitStatus.NormalExit and exit_code == 0 and media is not None:
             folder = Path(job.record.folder)
             try:

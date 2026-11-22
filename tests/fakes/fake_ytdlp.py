@@ -40,6 +40,10 @@ if mode == "slow":
 part.write_bytes(b"v" * 1000)
 print("SDMPROGRESS 1000 1000 NA", flush=True)
 part.replace(first)
+if audio and mode == "no-ffmpeg":  # downloads the audio, can't convert it, still exits 0
+    first.replace(work / f"{title}.webm")  # real yt-dlp leaves the audio as "Title [id].webm"
+    print("WARNING: Postprocessing: ffprobe and ffmpeg not found", flush=True)
+    sys.exit(0)
 if audio:
     extension = args[args.index("--audio-format") + 1]
     final = work / f"{title}.{extension}"
