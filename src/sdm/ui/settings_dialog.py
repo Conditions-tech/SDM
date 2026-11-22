@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from sdm.engine.proxy import parse_proxy
 from sdm.media.ffmpeg import INSTALL_HINT, find_ffmpeg
 from sdm.media.ytdlp import INSTALL_HINT as YTDLP_HINT
 from sdm.media.ytdlp import LOGIN_BROWSERS, TERMS_NOTICE, find_ytdlp
@@ -103,6 +104,18 @@ class SettingsDialog(QDialog):
         note = QLabel("The speed limit is shared by all downloads and applies at once.")
         note.setWordWrap(True)
         connections_form.addRow(note)
+        # M16 (ADR-0022): an optional HTTP proxy, such as a BDIX proxy from the user's ISP.
+        self.proxy_edit = QLineEdit(preferences.proxy.removeprefix("http://"))
+        self.proxy_edit.setPlaceholderText("Off. To use one: host:port, e.g. 10.10.10.10:8080")
+        connections_form.addRow("HTTP proxy (optional):", self.proxy_edit)
+        proxy_note = QLabel(
+            "Downloads and video pages then go through this proxy. Use only one you trust, "
+            "such as one your ISP gives you: it sees which sites you download from (https "
+            "files stay encrypted). Leave empty to connect directly."
+        )
+        proxy_note.setWordWrap(True)
+        proxy_note.setProperty("muted", True)
+        connections_form.addRow(proxy_note)
 
         # Notifications and tray
         self.notify_check = QCheckBox(
@@ -212,6 +225,7 @@ class SettingsDialog(QDialog):
             video_enabled=self.video_check.isChecked(),
             ytdlp_path=self.ytdlp_edit.text().strip(),
             video_login_browser=self.login_box.currentData(),
+            proxy=parse_proxy(self.proxy_edit.text()) or "",
         )
 
     def accept(self) -> None:
@@ -219,6 +233,13 @@ class SettingsDialog(QDialog):
         if folder and not Path(folder).is_dir():
             self.tabs.setCurrentIndex(0)
             self.error_label.setText(f"The folder doesn't exist: {folder}")
+            self.error_label.show()
+            return
+        try:
+            parse_proxy(self.proxy_edit.text())
+        except ValueError as exc:
+            self.tabs.setCurrentIndex(1)
+            self.error_label.setText(str(exc))
             self.error_label.show()
             return
         for edit in (self.ffmpeg_edit, self.ytdlp_edit):

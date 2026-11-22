@@ -104,6 +104,7 @@ def ytdlp_arguments(
     *,
     ffmpeg: Path | None = None,
     login_browser: str | None = None,
+    proxy: str | None = None,
 ) -> list[str]:
     """yt-dlp's arguments (without the program). --ignore-config first: a config file could
     otherwise add options such as --exec. The address comes last, after "--". Cookies only
@@ -126,6 +127,7 @@ def ytdlp_arguments(
         "-P", str(work),
         "-o", "%(title).100B [%(id)s].%(ext)s",
         *(["--ffmpeg-location", str(ffmpeg)] if ffmpeg else []),
+        *(["--proxy", proxy] if proxy else []),  # the user's proxy (M16)
         *quality.arguments,
         "--",
         url,

@@ -55,6 +55,7 @@ from sdm.engine.models import (
     ProgressCallback,
 )
 from sdm.engine.policy import NetworkPolicy, PolicyResolver
+from sdm.engine.proxy import check_through_proxy
 from sdm.engine.segmented import (
     SegmentedDownload,
     parse_content_range,
@@ -220,8 +221,11 @@ async def download(
         sock_connect=settings.connect_timeout,
         sock_read=settings.read_timeout,
     )
+    # With a proxy (M16) SDM connects only to the proxy the user chose; each server is checked
+    # by check_through_proxy before the proxy is asked for it.
+    resolver = None if settings.proxy else PolicyResolver(policy)
     session = aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(resolver=PolicyResolver(policy)),
+        connector=aiohttp.TCPConnector(resolver=resolver),
         timeout=timeout,
         # "identity" asks for the file exactly as stored, so sizes match Content-Length.
         headers={"User-Agent": settings.user_agent, "Accept-Encoding": "identity"},
@@ -566,12 +570,16 @@ async def _get_following_redirects(
             raise InvalidURLError(
                 f"The server redirected to an address SDM refuses: {exc}"
             ) from None
-        policy.check_url_host(parts.hostname or "")
+        if settings.proxy:
+            await check_through_proxy(policy, parts.hostname or "")
+        else:
+            policy.check_url_host(parts.hostname or "")
         headers = dict(extra_headers or {})
         referer = referer_header(referrer, current)  # recomputed for every hop, like a browser
         if referer is not None:
             headers["Referer"] = referer
-        response = await session.get(current, allow_redirects=False, headers=headers or None)
+        via = {"proxy": settings.proxy} if settings.proxy else {}
+        response = await session.get(current, allow_redirects=False, headers=headers or None, **via)
         if response.status not in _REDIRECT_STATUSES:
             return response
         location = response.headers.get("Location")
@@ -748,8 +756,17 @@ def _translate(exc: BaseException, host: str, directory: Path) -> SDMError:
             f"Could not find the server {host}. Check the address and your connection.",
             retryable=True,
         )
+    if isinstance(exc, aiohttp.ClientProxyConnectionError):
+        return DownloadError(
+            "Could not connect to the proxy set in Settings > Network. Check it, or turn it off.",
+            retryable=True,
+        )
     if isinstance(exc, aiohttp.ClientConnectorError):
         return DownloadError(f"Could not connect to {host}.", retryable=True)
+    if isinstance(exc, aiohttp.ClientHttpProxyError):
+        return DownloadError(
+            f"The proxy refused to reach {host} (HTTP {exc.status}).", retryable=True
+        )
     if isinstance(exc, aiohttp.InvalidURL):
         # e.g. "127.1 - is not a canonical IPv4 address": aiohttp refuses disguised IPs.
         return InvalidURLError(f"The address is not valid ({_printable(str(exc), 120)}).")

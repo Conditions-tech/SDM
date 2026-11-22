@@ -133,3 +133,10 @@ def test_finding_ytdlp(tmp_path):
     chosen = _exe(tmp_path / "tools/yt-dlp.exe")
     assert find_ytdlp(str(chosen), environ=empty) == chosen
     assert find_ytdlp(str(tmp_path / "nope.exe"), environ=empty) is None
+
+
+def test_the_users_proxy_reaches_ytdlp(tmp_path):
+    args = ytdlp_arguments(URL, QUALITIES["720p"], tmp_path, proxy="http://10.10.10.10:8080")
+    assert args[args.index("--proxy") + 1] == "http://10.10.10.10:8080"
+    assert args[-2:] == ["--", URL]
+    assert "--proxy" not in ytdlp_arguments(URL, QUALITIES["720p"], tmp_path)

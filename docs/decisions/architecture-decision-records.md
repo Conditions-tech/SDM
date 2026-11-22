@@ -630,3 +630,23 @@ deleted. A changed decision gets a new record that supersedes the old one.
   user opens (it only looks at video positions; the browser shows this permission). Chrome
   shows its "developer mode extensions" notice for unpacked extensions. The security model
   records both.
+
+## ADR-0022: An optional HTTP proxy (M16)
+
+- **Status:** Accepted (2026-11-22)
+- **Context:** The owner's ISP gives 200 Mbps to BDIX (Bangladesh's internet exchange) but
+  50 Mbps abroad. Some ISPs offer a proxy on BDIX that fetches international files for their
+  users. SDM ignored every proxy (`trust_env=False`), because a proxy resolves names itself and
+  so bypasses SDM's SSRF check (ADR-0007).
+- **Decision:** An opt-in setting, Settings > Connections > HTTP proxy, off by default. Only
+  `http://host:port` (parsed by `engine/proxy.py`); no SOCKS (it would need a new dependency)
+  and no proxy passwords (SDM keeps no secrets). With a proxy, aiohttp connects only to it;
+  before every request and redirect hop, `check_through_proxy` resolves the server's name in
+  SDM and applies the same `NetworkPolicy`, so a link still can't reach this computer or the
+  local network. https goes through `CONNECT` and stays encrypted end to end. yt-dlp gets the
+  same proxy (`--proxy`).
+- **Consequences:** The proxy can see which hosts the user downloads from (and whole http
+  downloads), so the setting tells the user to use only a proxy they trust. A small gap
+  remains: the proxy resolves the name again and could get a different answer than SDM
+  (DNS rebinding through the proxy); the proxy is the user's own choice, so this is
+  accepted. SDM doesn't promise more speed: that depends on the proxy and the ISP.

@@ -269,7 +269,8 @@ class DownloadController(QObject):
     def _engine_settings(self) -> DownloadSettings:
         # The preference can only lower the number of connections the controller was given.
         connections = min(self._base_settings.max_connections, self.preferences.connections)
-        return replace(self._base_settings, max_connections=connections)
+        proxy = self.preferences.proxy or None  # M16: the user's HTTP proxy, if any
+        return replace(self._base_settings, max_connections=connections, proxy=proxy)
 
     def pause_all(self) -> int:
         """Pause every running and waiting download; returns how many."""
@@ -408,6 +409,7 @@ class DownloadController(QObject):
             ffmpeg=find_ffmpeg(self.preferences.ffmpeg_path),
             policy=self._policy_for(record),
             login_browser=self.preferences.video_login_browser or None,
+            proxy=self.preferences.proxy or None,
         )
 
     def resume_all(self) -> int:

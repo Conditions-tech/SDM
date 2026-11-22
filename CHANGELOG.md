@@ -8,6 +8,9 @@ while SDM is in 0.x.
 
 ### Added
 
+- **HTTP proxy (optional, off by default):** Settings > Connections can send downloads and
+  video pages through a proxy you trust, such as a BDIX proxy from your ISP. SDM still checks
+  every destination itself (ADR-0022).
 - **Select several downloads** (Ctrl- or Shift-click, Ctrl+A or Downloads > Select all) and
   remove them together; choose **Remove from list** (files stay) or **Remove and delete
   files** (finished files go to the Recycle Bin).

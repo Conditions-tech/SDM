@@ -69,6 +69,7 @@ class _Job:
     rest: str = ""  # an unfinished output line
     stopping: str | None = None  # "pause" or "cancel" once the user asked
     login_browser: str | None = None  # whose login yt-dlp may use (opt-in, M15)
+    proxy: str | None = None  # the user's HTTP proxy (M16)
 
 
 def remove_work_folder(work: Path, folder: Path) -> None:
@@ -119,12 +120,13 @@ class VideoRunner(QObject):
         ffmpeg: Path | None,
         policy: NetworkPolicy,
         login_browser: str | None = None,
+        proxy: str | None = None,
     ) -> None:
         """Start (or continue) a video download. `command` runs yt-dlp."""
         download_id = record.id
         work = work_folder(Path(record.folder), download_id)
         self._jobs[download_id] = _Job(record, command, ffmpeg, work,
-                                       login_browser=login_browser)  # fmt: skip
+                                       login_browser=login_browser, proxy=proxy)  # fmt: skip
         self._deliver(Started(download_id))
         if record.video not in QUALITIES:
             self._fail(download_id, "This video download has no valid quality.")
@@ -189,7 +191,7 @@ class VideoRunner(QObject):
         process.setArguments(
             [*job.command[1:],
              *ytdlp_arguments(job.record.url, quality, job.work, ffmpeg=job.ffmpeg,
-                              login_browser=job.login_browser)]
+                              login_browser=job.login_browser, proxy=job.proxy)]
         )  # fmt: skip
         process.readyReadStandardOutput.connect(lambda: self._read(download_id))
         process.finished.connect(lambda code, status: self._finished(download_id, code, status))
