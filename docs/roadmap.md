@@ -556,7 +556,10 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
   The queue: at most 3 downloads run, the rest wait ("Waiting") and start oldest first when a
   slot frees (`pump()`, as ADR-0013 on Windows). Checked: 16 app tests (queue order and slot
   hand-over, cancelling a waiting entry, link extraction including hostile text), lint 0
-  errors, the share target registered on the owner's phone (package query).
+  errors, the share target registered on the owner's phone (package query). On the phone
+  (Android 16): a share of "Python 3.14.7 embeddable https://www.python.org/..." opened Add URL
+  with only the link filled in; a share with only `file:///...` and words opened it with "The
+  shared text has no http:// or https:// link." Nothing downloaded by itself.
 - M14f: a signed release APK from GitHub Actions, the owner's check on their phone, the
   release notes and social post drafts.
 
