@@ -89,6 +89,10 @@ The Android engine (`android/engine`) applies the same rules with its own code a
   `ResumeTest`, `SegmentedDownloadTest`, `SegmentsTest` (local MockWebServer only). Deliberate
   breaks of the loopback rule (2026-10-26) and of five resume/split checks (2026-11-22) each
   failed tests.
+- The app (M14d): partial files stay in the app's own storage; a partial-file path read from
+  the history is deleted only if it is SDM's own `.sdmpart` in that folder. Finished files go
+  to Download/SDM through MediaStore, which never replaces a file. SDM never opens a download.
+  Permissions: INTERNET, FOREGROUND_SERVICE(_DATA_SYNC), POST_NOTIFICATIONS (asked, optional).
 - A fix to a safety rule must be made in both engines.
 
 ## Environment notes

@@ -14,6 +14,9 @@ while SDM is in 0.x.
 - M14c: the Android engine resumes (Range + If-Range, never stitching two versions) and
   splits big files over up to 8 connections, with fallback, per-part retries and dynamic
   splitting; 69 tests.
+- M14d: the Android app's download list: Add URL, pause, resume, cancel, remove, a progress
+  notification while downloads run in the background, the history, and finished files in
+  Download/SDM.
 - M13 marked done: the owner reported the 1.2.0 checks done (install, the new icon, adding
   the extension with the assistant, the button over videos, a normal link opening SDM). This
   also closes the install checks left open in M11 and M12 (roadmap).

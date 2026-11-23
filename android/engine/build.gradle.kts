@@ -1,6 +1,7 @@
 // The download engine: plain Kotlin on the JVM, never Android (like sdm.engine never imports
 // Qt), so `gradlew :engine:test` runs on the PC in seconds.
 plugins {
+    `java-library` // for `api`: the app uses OkHttp and coroutines types the engine exposes
     alias(libs.plugins.kotlin.jvm)
 }
 
@@ -9,8 +10,8 @@ kotlin {
 }
 
 dependencies {
-    implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.okhttp)
+    api(libs.kotlinx.coroutines.core)
+    api(libs.okhttp)
 
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)

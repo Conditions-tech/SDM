@@ -533,6 +533,15 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
   on resume) each failed a test; the first try found two weak tests, which were strengthened.
 - M14d: the app: Add URL, the list, a foreground service with a progress notification, the
   SQLite history, saving to Download/SDM through MediaStore.
+  Built on 2026-11-23: `Downloads` (the list's controller, plain Kotlin: add, pause, resume,
+  cancel, remove; running downloads come back paused after a restart), `SqliteHistory`
+  (schema 1), `MediaStorePublisher` (partial files in the app's own storage, the finished file
+  copied to Download/SDM, hidden until complete, MediaStore numbering taken names),
+  `DownloadService` (dataSync foreground service with a progress notification; paused on
+  Android 15's 6-hour limit), finished/failed notifications, and the Compose list and Add URL
+  dialog. Checked: 10 controller tests against a local server (in-memory history, a folder for
+  Download/SDM), the 69 engine tests, `assembleDebug`, and lint (0 errors). Not checked yet:
+  the SQLite store, MediaStore, the service and the screens on a real phone.
 - M14e: Share → SDM (Android's share menu) and the queue limit.
 - M14f: a signed release APK from GitHub Actions, the owner's check on their phone, the
   release notes and social post drafts.
