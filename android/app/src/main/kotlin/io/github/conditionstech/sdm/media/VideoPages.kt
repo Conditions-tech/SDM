@@ -28,10 +28,18 @@ data class Stream(
     val bitrate: Double,
     val size: Long,
     val headers: Map<String, String>,
+    val order: Int = 0, // position in yt-dlp's list, which runs from worst to best
+    val width: Int = 0,
 ) {
+    /** "720p" means the shorter side, so a portrait reel (720 x 1280) counts as 720p. */
+    val quality: Int get() = if (width > 0 && height > 0) minOf(width, height) else height
+    // Known to have video / sound. Empty means "not known" (yt-dlp's None), not "none".
     val hasVideo get() = vcodec != "none" && vcodec.isNotEmpty()
     val hasAudio get() = acodec != "none" && acodec.isNotEmpty()
+    /** A ready-made file whose codecs yt-dlp doesn't know (Facebook's "hd", Instagram's "1"...). */
+    val codecsUnknown get() = vcodec.isEmpty() && acodec.isEmpty()
     val isH264 get() = vcodec.startsWith("avc1") || vcodec.startsWith("h264")
+    val isAv1 get() = vcodec.startsWith("av01")
     val isAac get() = acodec.startsWith("mp4a") || acodec == "aac"
 }
 
@@ -61,18 +69,21 @@ object VideoPages {
                 id = s.optString("id"),
                 url = url,
                 ext = s.optString("ext").lowercase(),
-                vcodec = s.optString("vcodec", "none").lowercase(),
-                acodec = s.optString("acodec", "none").lowercase(),
+                vcodec = s.optString("vcodec", "").lowercase(),
+                acodec = s.optString("acodec", "").lowercase(),
                 height = s.optInt("height", 0),
+                width = s.optInt("width", 0),
                 bitrate = s.optDouble("tbr", 0.0).takeUnless { it.isNaN() } ?: 0.0,
                 size = s.optLong("size", 0),
                 headers = headers,
+                order = index,
             )
         }
         return PageInfo(root.optString("title").ifBlank { "video" }.take(200), streams)
     }
 
-    fun choose(info: PageInfo, choice: VideoChoice): StreamPlan {
+    /** [av1] is true where MediaMuxer can put AV1 into MP4 (Android 14+). */
+    fun choose(info: PageInfo, choice: VideoChoice, av1: Boolean = false): StreamPlan {
         val streams = info.streams
         if (streams.isEmpty()) throw VideoPageException("No downloadable video was found on this page.")
         val aacAudio = streams.filter { !it.hasVideo && it.hasAudio && it.isAac }.maxByOrNull { it.bitrate }
@@ -81,18 +92,26 @@ object VideoPages {
                 VideoChoice.M4A -> aacAudio
                 else -> aacAudio ?: streams.filter { !it.hasVideo && it.hasAudio }.maxByOrNull { it.bitrate }
             } ?: streams.filter { it.hasAudio && (choice == VideoChoice.MP3 || it.isAac) }.minByOrNull { it.height }
+                // MP3 can also start from a ready-made MP4's sound, whatever yt-dlp knows about it.
+                ?: streams.filter { it.codecsUnknown && it.ext == "mp4" && choice == VideoChoice.MP3 }.minByOrNull { it.order }
             return StreamPlan(null, audio ?: throw VideoPageException("This page has no sound SDM can turn into ${choice.label}."))
         }
-        val byQuality = compareBy<Stream>({ it.height }, { it.bitrate })
-        val videoOnly = streams.filter { it.hasVideo && !it.hasAudio && it.isH264 && it.ext == "mp4" && it.height <= choice.maxHeight }
-            .maxWithOrNull(byQuality)
-        val together = streams.filter { it.hasVideo && it.hasAudio && it.ext == "mp4" && it.height <= choice.maxHeight }
-            .maxWithOrNull(byQuality)
+        val byQuality = compareBy<Stream>({ it.quality }, { it.bitrate }, { it.order })
+        fun videoOnly(accept: (Stream) -> Boolean) =
+            streams.filter { it.hasVideo && !it.hasAudio && accept(it) && it.ext == "mp4" && it.quality <= choice.maxHeight }
+                .maxWithOrNull(byQuality)
+        val h264 = videoOnly { it.isH264 }
+        // A ready-made MP4 with video and sound, known or (Facebook, Instagram) unknown codecs.
+        val together = streams.filter {
+            it.ext == "mp4" && ((it.hasVideo && it.hasAudio) || it.codecsUnknown) && it.quality <= choice.maxHeight
+        }.maxWithOrNull(byQuality)
         // Separate video + sound when it gives a better picture than a ready-made combined stream.
-        if (videoOnly != null && aacAudio != null && (together == null || videoOnly.height > together.height)) {
-            return StreamPlan(videoOnly, aacAudio)
+        if (h264 != null && aacAudio != null && (together == null || h264.quality > together.quality)) {
+            return StreamPlan(h264, aacAudio)
         }
         if (together != null) return StreamPlan(together, null)
+        val av1Video = if (av1) videoOnly { it.isAv1 } else null
+        if (av1Video != null && aacAudio != null) return StreamPlan(av1Video, aacAudio)
         throw VideoPageException(
             "This page has no ${choice.label} (or smaller) MP4 video the phone can save without ffmpeg.",
         )

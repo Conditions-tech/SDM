@@ -619,6 +619,15 @@ as well as M4A. The first Android release (M14f) comes after M15.
   otherwise says where to turn them on; the user can still choose. Checked: 34 app tests; on
   the owner's phone a shared "Me at the zoo https://youtu.be/..." opened Add URL on 720p.
 
+Facebook and Instagram (owner's own test, 2026-11-23): both failed on the phone with "no
+1080p (or smaller) MP4". yt-dlp had read both pages without a login; the bug was SDM's: the
+ready-made MP4s (Facebook `sd`/`hd`, Instagram `1`-`3`) have *unknown* codecs, which the Python
+side turned into "none" (no video). Their separate streams are AV1 (Facebook) and VP9
+(Instagram). Fixed: unknown codecs stay unknown and ready-made MP4s are used; AV1 + M4A is
+allowed on Android 14+ (MediaMuxer); "720p" compares the shorter side, so portrait reels
+(720 x 1280) count. After Retry on the phone: Instagram 720x900 H.264 + AAC, 25.7 s;
+Facebook 720x1280 H.264 + AAC, 18.6 s (ffprobe). TikTok not tested yet (no link).
+
 Found before the first push (2026-11-23): the root `.gitignore` rule `downloads/` (SDM's
 runtime folders) had hidden the app's `downloads` source package, so M14d-M15c's list,
 history, MediaStore saving, Share and their tests were never committed; `android/.gitignore`

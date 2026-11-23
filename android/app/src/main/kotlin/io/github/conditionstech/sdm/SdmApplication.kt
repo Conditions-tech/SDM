@@ -43,6 +43,7 @@ class SdmApplication : Application() {
             onActive = { DownloadService.start(this) },
             onFinished = { Notifications.finished(this, it) },
             videoTools = AndroidVideoTools(mediaConverter),
+            av1InMp4 = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
         )
         conversions = Conversions(
             converter = mediaConverter,

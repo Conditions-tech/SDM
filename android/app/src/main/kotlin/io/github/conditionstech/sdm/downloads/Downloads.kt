@@ -44,6 +44,7 @@ class Downloads(
     private val onFinished: (DownloadItem) -> Unit = {}, // completed or failed: tell the user
     private val maxRunning: Int = 3, // the queue limit (M14e): the rest wait as "Waiting"
     private val videoTools: VideoTools? = null, // video pages (M15b), when the app has them
+    private val av1InMp4: Boolean = false, // Android 14+ can put AV1 video into MP4
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val lock = Any()
@@ -235,7 +236,7 @@ class Downloads(
         val tools = videoTools ?: throw VideoPageException("Video pages are not available in this version.")
         downloader.checkDestination(pageUrl) // yt-dlp reads the page: the same rules apply to it
         val info = VideoPages.parse(tools.extract(pageUrl))
-        val plan = VideoPages.choose(info, choice)
+        val plan = VideoPages.choose(info, choice, av1 = av1InMp4)
         // A title is not a path: "part 1/2" keeps both halves (sanitize alone would keep "2").
         val title = info.title.replace('/', '_').replace('\\', '_')
         val name = FileNames.sanitize(title, maxBytes = 180) + "." + choice.extension

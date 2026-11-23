@@ -96,9 +96,12 @@ def extract(url: str) -> str:
                 "id": str(f.get("format_id") or ""),
                 "url": f["url"],
                 "ext": f.get("ext") or "",
-                "vcodec": f.get("vcodec") or "none",
-                "acodec": f.get("acodec") or "none",
+                # yt-dlp: "none" = the stream has no video/sound; None = not known. Keep them
+                # apart: Facebook and Instagram list their ready-made MP4s with unknown codecs.
+                "vcodec": f.get("vcodec") or "",
+                "acodec": f.get("acodec") or "",
                 "height": f.get("height") or 0,
+                "width": f.get("width") or 0,
                 "tbr": f.get("tbr") or 0,
                 "size": f.get("filesize") or f.get("filesize_approx") or 0,
                 "headers": headers,

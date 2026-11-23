@@ -25,6 +25,8 @@ while SDM is in 0.x.
 - M15b: video pages on Android (Settings, off by default, with a terms notice): 720p, 1080p,
   MP3 or M4A from a page's address; yt-dlp lists the streams and SDM's own engine downloads
   them, then Android joins them.
+- Video pages: Facebook and Instagram videos now download (their ready-made MP4s were being
+  skipped), AV1 video on Android 14+, and "720p" works for portrait videos.
 - M15c: sharing a video page to SDM starts Add URL on 720p (or says how to turn video pages on).
 - M13 marked done: the owner reported the 1.2.0 checks done (install, the new icon, adding
   the extension with the assistant, the button over videos, a normal link opening SDM). This
