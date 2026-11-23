@@ -66,7 +66,7 @@ fun MusicScreen(library: MediaStoreLibrary, modifier: Modifier = Modifier, onPla
     val found = MediaLibrary.search(all, query)
 
     Column(modifier.fillMaxSize()) {
-        AccessBanner(library, "music")
+        AccessBanner(library, MediaKind.AUDIO)
         SearchBox(query, "Search songs, artists, albums") { query = it }
         val group = openGroup
         if (group != null) {
@@ -101,7 +101,7 @@ fun VideosScreen(library: MediaStoreLibrary, modifier: Modifier = Modifier, onPl
     var order by remember { mutableStateOf(SortOrder.NEWEST) }
     val shown = MediaLibrary.sorted(MediaLibrary.search(all, query), order)
     Column(modifier.fillMaxSize()) {
-        AccessBanner(library, "videos")
+        AccessBanner(library, MediaKind.VIDEO)
         SearchBox(query, "Search videos and folders") { query = it }
         ChipRow(SortOrder.entries.map { it.label }, order.label) { label -> order = SortOrder.entries.first { it.label == label } }
         if (shown.isEmpty()) Empty(if (all.isEmpty()) "No videos found yet." else "Nothing matches “$query”.")
@@ -129,24 +129,33 @@ fun VideosScreen(library: MediaStoreLibrary, modifier: Modifier = Modifier, onPl
     }
 }
 
-/** Shown until the user allows the whole phone's media; until then SDM lists its own files. */
+/**
+ * Shown until the user allows this tab's media; until then SDM lists its own files (or, with
+ * Android 14's "selected" choice, the videos the user picked).
+ */
 @Composable
-private fun AccessBanner(library: MediaStoreLibrary, what: String) {
-    var granted by remember { mutableStateOf(library.hasFullAccess) }
+private fun AccessBanner(library: MediaStoreLibrary, kind: MediaKind) {
+    var access by remember { mutableStateOf(library.access(kind)) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        granted = library.hasFullAccess
+        access = library.access(kind)
         library.refresh()
     }
-    if (granted) return
+    if (access == MediaStoreLibrary.Access.FULL) return
+    val what = if (kind == MediaKind.AUDIO) "music" else "videos"
     Card(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Text("Showing only SDM's downloads", style = MaterialTheme.typography.titleSmall)
-            Text(
-                "Allow SDM to see the $what on this phone to play all of it. SDM only reads your media to list and play it.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            TextButton(onClick = { ask.launch(library.permissions) }) { Text("Allow access") }
+            val (title, text) = if (access == MediaStoreLibrary.Access.SELECTED) {
+                "Showing only the videos you picked" to
+                    "You allowed SDM to see some videos. To list all of them, allow all videos."
+            } else {
+                "Showing only SDM's downloads" to
+                    "Allow SDM to see the $what on this phone to play all of it. SDM only reads your media to list and play it."
+            }
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = { ask.launch(library.permissionsFor(kind)) }) {
+                Text(if (access == MediaStoreLibrary.Access.SELECTED) "Change access" else "Allow access")
+            }
         }
     }
 }

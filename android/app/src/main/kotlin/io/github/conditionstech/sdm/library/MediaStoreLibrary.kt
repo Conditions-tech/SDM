@@ -40,16 +40,35 @@ class MediaStoreLibrary(private val context: Context, private val scope: Corouti
         refresh()
     }
 
-    /** The permission that lets the players see every song and video, by Android version. */
-    val permissions: Array<String>
-        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO)
-        } else {
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
+    /** How much of the phone's music or videos SDM may see. */
+    enum class Access { FULL, SELECTED, OWN_FILES }
 
-    val hasFullAccess: Boolean
-        get() = permissions.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
+    /** The permissions to ask for one tab: each tab asks only for its own kind of media. */
+    fun permissionsFor(kind: MediaKind): Array<String> = when {
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        kind == MediaKind.AUDIO -> arrayOf(Manifest.permission.READ_MEDIA_AUDIO)
+        // Android 14+ lets the user allow only some videos; asking with this one too makes that
+        // choice work as intended (seen on the owner's phone).
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
+            arrayOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+        else -> arrayOf(Manifest.permission.READ_MEDIA_VIDEO)
+    }
+
+    fun access(kind: MediaKind): Access {
+        fun granted(permission: String) =
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        val full = when {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU -> Manifest.permission.READ_EXTERNAL_STORAGE
+            kind == MediaKind.AUDIO -> Manifest.permission.READ_MEDIA_AUDIO
+            else -> Manifest.permission.READ_MEDIA_VIDEO
+        }
+        return when {
+            granted(full) -> Access.FULL
+            kind == MediaKind.VIDEO && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) -> Access.SELECTED
+            else -> Access.OWN_FILES
+        }
+    }
 
     fun refresh() {
         scope.launch(Dispatchers.IO) {

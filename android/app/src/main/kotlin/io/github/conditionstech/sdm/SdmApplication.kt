@@ -9,6 +9,8 @@ import io.github.conditionstech.sdm.downloads.SqliteHistory
 import io.github.conditionstech.sdm.engine.DownloadSettings
 import io.github.conditionstech.sdm.engine.HttpDownloader
 import io.github.conditionstech.sdm.library.MediaStoreLibrary
+import io.github.conditionstech.sdm.player.MusicPlayer
+import io.github.conditionstech.sdm.player.SleepTimer
 import io.github.conditionstech.sdm.media.AndroidMediaConverter
 import io.github.conditionstech.sdm.media.AndroidVideoTools
 import io.github.conditionstech.sdm.media.Conversions
@@ -27,6 +29,11 @@ class SdmApplication : Application() {
         private set
     lateinit var library: MediaStoreLibrary
         private set
+    lateinit var musicPlayer: MusicPlayer
+        private set
+
+    /** Lives with the app, so it keeps counting while music plays with the screen off (M17b). */
+    val sleepTimer = SleepTimer(CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
 
     override fun onCreate() {
         super.onCreate()
@@ -35,6 +42,7 @@ class SdmApplication : Application() {
         Notifications.createChannels(this)
         preferences = Preferences(this)
         library = MediaStoreLibrary(this, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+        musicPlayer = MusicPlayer(this)
         val mediaConverter = AndroidMediaConverter(this)
         // Partial files live in the app's own storage; finished files are copied to Download/SDM.
         val work = File(getExternalFilesDir(null) ?: filesDir, "partial").apply { mkdirs() }

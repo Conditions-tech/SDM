@@ -759,3 +759,9 @@ deleted. A changed decision gets a new record that supersedes the old one.
   - **Later, if wanted:** equaliser, lyrics, network streams, pinch zoom.
 - **Consequences:** a bigger app with a media permission (asked when the user opens a player,
   not at install). The security model records the narrowed rule.
+- **M17b notes:** Media3 1.11.1 checked (Apache-2.0). `pauseAtEndOfMediaItems` (the sleep
+  timer's "end of this song") is an unstable Media3 API, opted in on purpose: re-check it when
+  Media3 is updated. Each tab asks only for its own permission; on Android 14+ the Videos tab
+  also asks READ_MEDIA_VISUAL_USER_SELECTED so a "selected videos" choice works. Not built:
+  playing YouTube without ads in the background (YouTube Premium's feature; against YouTube's
+  terms and the no-paywall-bypass rule), declined even for private use.

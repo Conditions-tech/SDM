@@ -26,6 +26,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import io.github.conditionstech.sdm.library.MusicScreen
+import io.github.conditionstech.sdm.player.MiniPlayer
+import io.github.conditionstech.sdm.player.NowPlayingScreen
+import androidx.activity.compose.BackHandler
 import io.github.conditionstech.sdm.library.VideosScreen
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.FlowRow
@@ -91,11 +94,20 @@ fun SdmTabs(app: SdmApplication, shared: SharedLink?, onSharedHandled: () -> Uni
     LaunchedEffect(shared) { if (shared != null) tab = 0 }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    fun comingNext() = scope.launch { snackbar.showSnackbar("Playing comes in the next step (M17b, M17c).") }
+    var showPlayer by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) { app.musicPlayer.reconnect() } // music may still be playing
+    if (showPlayer) {
+        BackHandler { showPlayer = false }
+        NowPlayingScreen(app.musicPlayer, app.sleepTimer) { showPlayer = false }
+        return
+    }
+    fun comingNext() = scope.launch { snackbar.showSnackbar("The video player comes in the next step (M17c).") }
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
+            Column {
+            MiniPlayer(app.musicPlayer) { showPlayer = true }
             NavigationBar {
                 listOf(
                     Triple("Downloads", R.drawable.ic_tab_downloads, 0),
@@ -110,12 +122,13 @@ fun SdmTabs(app: SdmApplication, shared: SharedLink?, onSharedHandled: () -> Uni
                     )
                 }
             }
+            }
         },
     ) { padding ->
         Box(Modifier.padding(padding)) {
             when (tab) {
                 0 -> HomeScreen(app.downloads, app.conversions, app.preferences, shared, onSharedHandled)
-                1 -> TabPage("Music") { MusicScreen(app.library) { _, _ -> comingNext() } }
+                1 -> TabPage("Music") { MusicScreen(app.library) { songs, song -> app.musicPlayer.play(songs, song) } }
                 else -> TabPage("Videos") { VideosScreen(app.library) { comingNext() } }
             }
         }

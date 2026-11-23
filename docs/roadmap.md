@@ -731,6 +731,20 @@ whole phone's media after Android's permission. Steps (each to be approved befor
   Download/SDM). Note: Android marks WhatsApp audio as music, so it appears in Songs.
 - M17b: music player: queue, shuffle, repeat, background play, notification and lock-screen
   controls (MediaSession), playlists.
+  Built on 2026-11-23 (owner asked to add a sleep timer with custom times): Media3 1.11.1
+  (Apache-2.0) `PlaybackService` (MediaSessionService: background play, notification and
+  lock-screen controls, audio focus, pause when headphones are unplugged); `MusicPlayer` (a
+  MediaController for the screens); a mini player above the tabs and a Now Playing screen
+  (seek, previous/next, shuffle, repeat off/all/one, queue); `SleepTimer` (15/30/45/60/90
+  minutes, custom 1-1440, end of this song; 10 s fade-out; plain Kotlin, 6 tests on simulated
+  time). Found on the phone: the owner had allowed all music but only *selected* videos
+  (Android 14+), and the access card checked both together; each tab now checks its own
+  permission and the Videos card explains limited access. Checked on the owner's phone: a song
+  played (MediaSession PLAYING), the mini player and Now Playing worked, repeat cycled
+  off/all/one, a 1-minute custom timer paused the music (still playing at 40 s, paused by
+  70 s), and the media notification is public (lock screen). Lint 0 errors. Declined: a YouTube
+  "music mode with an ad blocker" (it gets around YouTube Premium; refused even for private
+  use). Left for M17b: playlists.
 - M17c: video player: full screen, swipe for brightness/volume/seek, double-tap +/-10 s, speed,
   lock, resume position, .srt subtitles.
 - M17d: polish, tests (fakes on the PC, on-phone checks), release 1.1.0.

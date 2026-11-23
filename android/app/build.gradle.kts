@@ -87,6 +87,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.media3.exoplayer) // the players (M17, ADR-0025; Apache-2.0)
+    implementation(libs.androidx.media3.session)
 
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
