@@ -1,0 +1,48 @@
+# Checks the Android signing key secrets without building or publishing anything (M14f).
+# Start it from GitHub: Actions > Android key check > Run workflow. It prints sizes and the
+# key's alias names, never the key or the passwords.
+name: Android key check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad  # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Check the four secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "Key text: ${#KEYSTORE_BASE64} characters"
+          echo "Password: ${#STORE_PASSWORD} characters; key password: ${#KEY_PASSWORD} characters"
+          echo "Alias secret: ${#KEY_ALIAS} characters"
+          clean=$(printf '%s' "$KEYSTORE_BASE64" | tr -cd 'A-Za-z0-9+/=')
+          printf '%s' "$clean" | base64 -d > key.jks || { echo "RESULT: the key text is not valid base64"; exit 1; }
+          echo "Key file: $(stat -c %s key.jks) bytes (compare with the file on your PC)"
+          if ! keytool -list -keystore key.jks -storepass "$STORE_PASSWORD" > list.txt 2> err.txt; then
+            echo "RESULT: the key does NOT open with ANDROID_KEYSTORE_PASSWORD"
+            sed 's/^/  keytool: /' err.txt
+            exit 1
+          fi
+          echo "The key opens with ANDROID_KEYSTORE_PASSWORD. Aliases inside:"
+          grep -i "PrivateKeyEntry" list.txt | cut -d, -f1 | sed 's/^/  /'
+          if ! keytool -list -keystore key.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "RESULT: ANDROID_KEY_ALIAS is not one of the aliases above"
+            exit 1
+          fi
+          if [ "$STORE_PASSWORD" != "$KEY_PASSWORD" ]; then
+            echo "RESULT: ANDROID_KEY_PASSWORD differs from ANDROID_KEYSTORE_PASSWORD (a key made by keytool uses the same one)"
+            exit 1
+          fi
+          echo "RESULT: all four secrets are right"
