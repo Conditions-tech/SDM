@@ -142,9 +142,9 @@ private fun EmptyList(modifier: Modifier) {
 @Composable
 private fun AddUrlDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
     val clipboard = LocalClipboardManager.current
-    // A copied link is offered ready to go; anything else starts empty.
-    val copied = clipboard.getText()?.text?.trim().orEmpty()
-    var url by remember { mutableStateOf(if (copied.startsWith("http://") || copied.startsWith("https://")) copied else "") }
+    // The clipboard is read only when the user taps Paste: reading it by itself would show
+    // Android's "SDM accessed the clipboard" notice (seen on the owner's phone, Android 16).
+    var url by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -159,6 +159,12 @@ private fun AddUrlDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
                 label = { Text("Address of the file") },
                 isError = error != null,
                 supportingText = { error?.let { Text(it) } },
+                trailingIcon = {
+                    TextButton(onClick = {
+                        url = clipboard.getText()?.text?.trim().orEmpty()
+                        error = null
+                    }) { Text("Paste") }
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),

@@ -540,8 +540,15 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
   `DownloadService` (dataSync foreground service with a progress notification; paused on
   Android 15's 6-hour limit), finished/failed notifications, and the Compose list and Add URL
   dialog. Checked: 10 controller tests against a local server (in-memory history, a folder for
-  Download/SDM), the 69 engine tests, `assembleDebug`, and lint (0 errors). Not checked yet:
-  the SQLite store, MediaStore, the service and the screens on a real phone.
+  Download/SDM), the 69 engine tests, `assembleDebug`, and lint (0 errors).
+  On the owner's phone (Android 16, debug APK over USB, owner-approved, 2026-11-23):
+  python.org's `python-3.14.7-embed-amd64.zip` downloaded over 8 connections (about
+  1.7 MB/s) into Download/SDM, 12,673,227 bytes, SHA-256 matching python.org's published value
+  (`d297e5ff…a6ab1f15`); a second run paused at 847 KB, the app was force-stopped and reopened
+  (still paused, 847 KB), Resume finished it as `... (1).zip` (same SHA-256; the first copy
+  untouched); the partial folder was left empty; no crashes. Found and fixed: Add URL read the
+  clipboard by itself, so Android showed "SDM accessed the clipboard"; it now reads it only on
+  a Paste button. Not observed: the notifications' content (only that SDM's icon appeared).
 - M14e: Share → SDM (Android's share menu) and the queue limit.
 - M14f: a signed release APK from GitHub Actions, the owner's check on their phone, the
   release notes and social post drafts.
