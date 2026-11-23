@@ -736,3 +736,26 @@ deleted. A changed decision gets a new record that supersedes the old one.
   only 64-bit phones are supported (Python 3.12+). The engine's tests stay on the PC; media
   tests use small synthetic files and a fake yt-dlp, never real video sites. The release
   (M14f) waits for M15.
+
+## ADR-0025: Music and video players in SDM for Android (M17)
+
+- **Date:** 2026-11-23 · **Status:** Accepted (owner's choices); details to be confirmed per step
+- **Context:** The owner asked for a music section like Mi Music and a video player like MX
+  Player inside SDM for Android. SDM's rule so far: SDM never opens a downloaded file.
+- **Decision (owner's choices):**
+  - **Rule change:** SDM may *play* audio and video in its own player. It still never opens,
+    runs or installs anything else (APKs, documents, archives...).
+  - **Library: the whole phone** (all songs and videos, read through MediaStore), so Android
+    asks once for READ_MEDIA_AUDIO / READ_MEDIA_VIDEO (Android 13+; READ_EXTERNAL_STORAGE on
+    10-12). Without the permission, the players show only SDM's own downloads.
+  - **Our own design, no copying:** the same kinds of features as popular players, designed
+    for SDM (clean room: no assets, layouts or code from Mi Music or MX Player).
+  - **Player library:** AndroidX Media3 (ExoPlayer, MediaSession; Apache-2.0, $0), to be
+    checked (version, size) before it is added.
+  - **First version:** music library (songs, albums, artists, folders), playback with queue,
+    shuffle, repeat, background play with lock-screen and notification controls, playlists;
+    video list and full-screen player with swipe gestures (brightness, volume, seek),
+    double-tap +/-10 s, speed, lock, resume position, .srt subtitles beside the video.
+  - **Later, if wanted:** equaliser, lyrics, network streams, pinch zoom.
+- **Consequences:** a bigger app with a media permission (asked when the user opens a player,
+  not at install). The security model records the narrowed rule.

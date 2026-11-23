@@ -695,3 +695,17 @@ runtime folders) had hidden the app's `downloads` source package, so M14d-M15c's
 history, MediaStore saving, Share and their tests were never committed; `android/.gitignore`
 now un-ignores `app/src/**/downloads/`. A fresh clone of the branch then built and passed all
 106 tests (72 engine, 34 app). From now on, release checks build from a fresh clone.
+
+## M17: Music and video players on Android (planned)
+
+Asked for by the owner on 2026-11-23 (like Mi Music and MX Player); decisions in ADR-0025:
+SDM may play audio and video (never open or install anything else), and the players show the
+whole phone's media after Android's permission. Steps (each to be approved before code):
+
+- M17a: Media3 checked and added; the media library (MediaStore query, permission asked when a
+  player opens); Music and Videos tabs.
+- M17b: music player: queue, shuffle, repeat, background play, notification and lock-screen
+  controls (MediaSession), playlists.
+- M17c: video player: full screen, swipe for brightness/volume/seek, double-tap +/-10 s, speed,
+  lock, resume position, .srt subtitles.
+- M17d: polish, tests (fakes on the PC, on-phone checks), release 1.1.0.
