@@ -3,6 +3,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.chaquopy) // Python 3.13 inside the app, for yt-dlp and LAME (ADR-0023)
 }
 
 android {
@@ -16,6 +17,8 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        // Chaquopy's Python 3.12+ exists for 64-bit phones only (ADR-0023).
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
     buildTypes {
@@ -39,6 +42,19 @@ android {
 
 kotlin {
     jvmToolchain(17)
+}
+
+chaquopy {
+    defaultConfig {
+        version = "3.13" // lameenc's Android wheels stop at Python 3.13 (ADR-0023)
+        // The PC needs the same Python to prepare the packages: SDM_BUILD_PYTHON points at it
+        // (uv python install 3.13); otherwise Chaquopy looks for `py -3.13`.
+        System.getenv("SDM_BUILD_PYTHON")?.let { buildPython(it) }
+        pip {
+            install("yt-dlp==2026.10.26") // pinned: an update is a new SDM release
+            install("lameenc==1.7.0")
+        }
+    }
 }
 
 dependencies {

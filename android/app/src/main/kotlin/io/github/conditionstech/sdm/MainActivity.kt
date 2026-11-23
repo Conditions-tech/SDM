@@ -3,6 +3,9 @@ package io.github.conditionstech.sdm
 import android.Manifest
 import android.os.Build
 import android.content.Intent
+import com.chaquo.python.Python
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -110,6 +113,7 @@ fun SdmTheme(content: @Composable () -> Unit) {
 fun HomeScreen(downloads: Downloads, shared: SharedLink? = null, onSharedHandled: () -> Unit = {}) {
     val items by downloads.items.collectAsState()
     var adding by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
     var prefill by remember { mutableStateOf("") }
     var prefillError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(shared) {
@@ -124,7 +128,12 @@ fun HomeScreen(downloads: Downloads, shared: SharedLink? = null, onSharedHandled
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.app_name)) },
+                actions = { TextButton(onClick = { showAbout = true }) { Text("About") } },
+            )
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = {
                 prefill = ""
@@ -144,6 +153,7 @@ fun HomeScreen(downloads: Downloads, shared: SharedLink? = null, onSharedHandled
             }
         }
     }
+    if (showAbout) AboutDialog(onDismiss = { showAbout = false })
     if (adding) {
         AddUrlDialog(
             initialUrl = prefill,
@@ -295,4 +305,34 @@ internal fun statusLine(item: DownloadItem): String {
         DownloadState.FAILED -> item.error ?: "Failed"
         DownloadState.CANCELLED -> "Cancelled"
     }
+}
+
+/** Versions and licences, including the bundled tools (ADR-0023). */
+@Composable
+private fun AboutDialog(onDismiss: () -> Unit) {
+    var tools by remember { mutableStateOf("Checking the bundled tools…") }
+    LaunchedEffect(Unit) {
+        tools = withContext(Dispatchers.IO) {
+            try {
+                val found = Python.getInstance().getModule("sdm_media").callAttr("versions").asMap()
+                found.entries.joinToString("\n") { (name, version) -> "$name $version" }
+            } catch (e: Exception) {
+                "The bundled tools could not start (${e.javaClass.simpleName})."
+            }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("About SDM") },
+        text = {
+            Text(
+                "Smart Download Manager ${BuildConfig.VERSION_NAME} for Android\n" +
+                    "Apache License 2.0 · github.com/Conditions-tech/SDM\n\n" +
+                    "Bundled:\n$tools\n\n" +
+                    "Licences: OkHttp, Kotlin coroutines, AndroidX (Apache-2.0); Chaquopy (MIT); " +
+                    "Python (PSF); yt-dlp (Unlicense); LAME (LGPL-2.0, used as a separate library).",
+            )
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
 }

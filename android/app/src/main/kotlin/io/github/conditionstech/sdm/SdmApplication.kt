@@ -1,6 +1,8 @@
 package io.github.conditionstech.sdm
 
 import android.app.Application
+import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
 import io.github.conditionstech.sdm.downloads.Downloads
 import io.github.conditionstech.sdm.downloads.MediaStorePublisher
 import io.github.conditionstech.sdm.downloads.SqliteHistory
@@ -18,6 +20,8 @@ class SdmApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Python (yt-dlp, LAME) starts once, with the app (ADR-0023).
+        if (!Python.isStarted()) Python.start(AndroidPlatform(this))
         Notifications.createChannels(this)
         // Partial files live in the app's own storage; finished files are copied to Download/SDM.
         val work = File(getExternalFilesDir(null) ?: filesDir, "partial").apply { mkdirs() }

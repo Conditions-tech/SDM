@@ -57,6 +57,8 @@ node scripts/chrome_bridge_check/video_button_check.mjs   # the video button in 
 uv run python scripts/promo/make_promo.py       # promo videos (dist\promo, ~5 min each; ffmpeg)
 uv run python scripts/promo/make_promo_audio.py VOICE.onnx 0   # voice + music (PIPER_PYTHON: see file)
 cd android; .\gradlew.bat :engine:test :app:assembleDebug   # Android (M14): tests + debug APK
+# Android app builds need Python 3.13 (Chaquopy, ADR-0023): uv python install 3.13, then
+# $env:SDM_BUILD_PYTHON = (uv python find 3.13)
 ```
 
 ## Layout and boundaries

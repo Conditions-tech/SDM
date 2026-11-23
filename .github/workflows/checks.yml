@@ -52,4 +52,8 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      # Chaquopy prepares the app's Python packages with the same Python version (ADR-0023).
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.13"
       - run: ./gradlew --no-daemon :engine:test :app:testDebugUnitTest :app:assembleDebug
