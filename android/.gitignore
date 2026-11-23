@@ -11,3 +11,7 @@ captures/
 *.jks
 *.keystore
 keystore.properties
+
+# The root .gitignore's "downloads/" (SDM's runtime download folders) must not hide the app's
+# `downloads` source package (found before the first push, 2026-11-23).
+!app/src/**/downloads/
