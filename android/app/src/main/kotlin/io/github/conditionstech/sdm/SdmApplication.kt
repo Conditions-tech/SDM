@@ -9,6 +9,7 @@ import io.github.conditionstech.sdm.downloads.SqliteHistory
 import io.github.conditionstech.sdm.engine.DownloadSettings
 import io.github.conditionstech.sdm.engine.HttpDownloader
 import io.github.conditionstech.sdm.media.AndroidMediaConverter
+import io.github.conditionstech.sdm.media.AndroidVideoTools
 import io.github.conditionstech.sdm.media.Conversions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,12 +22,16 @@ class SdmApplication : Application() {
         private set
     lateinit var conversions: Conversions
         private set
+    lateinit var preferences: Preferences
+        private set
 
     override fun onCreate() {
         super.onCreate()
         // Python (yt-dlp, LAME) starts once, with the app (ADR-0023).
         if (!Python.isStarted()) Python.start(AndroidPlatform(this))
         Notifications.createChannels(this)
+        preferences = Preferences(this)
+        val mediaConverter = AndroidMediaConverter(this)
         // Partial files live in the app's own storage; finished files are copied to Download/SDM.
         val work = File(getExternalFilesDir(null) ?: filesDir, "partial").apply { mkdirs() }
         downloads = Downloads(
@@ -37,9 +42,10 @@ class SdmApplication : Application() {
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
             onActive = { DownloadService.start(this) },
             onFinished = { Notifications.finished(this, it) },
+            videoTools = AndroidVideoTools(mediaConverter),
         )
         conversions = Conversions(
-            converter = AndroidMediaConverter(this),
+            converter = mediaConverter,
             publisher = MediaStorePublisher(this),
             workDir = work,
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),

@@ -16,6 +16,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +32,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -65,6 +68,7 @@ import io.github.conditionstech.sdm.media.ConversionState
 import io.github.conditionstech.sdm.media.Conversions
 import io.github.conditionstech.sdm.media.ConvertFormat
 import io.github.conditionstech.sdm.media.ConvertInput
+import io.github.conditionstech.sdm.media.VideoChoice
 import io.github.conditionstech.sdm.engine.SdmException
 import io.github.conditionstech.sdm.engine.Units
 
@@ -79,7 +83,7 @@ class MainActivity : ComponentActivity() {
         val app = application as SdmApplication
         if (savedInstanceState == null) takeShared(intent)
         setContent {
-            SdmTheme { HomeScreen(app.downloads, app.conversions, shared, onSharedHandled = { shared = null }) }
+            SdmTheme { HomeScreen(app.downloads, app.conversions, app.preferences, shared, onSharedHandled = { shared = null }) }
         }
     }
 
@@ -115,12 +119,19 @@ fun SdmTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(downloads: Downloads, conversions: Conversions, shared: SharedLink? = null, onSharedHandled: () -> Unit = {}) {
+fun HomeScreen(
+    downloads: Downloads,
+    conversions: Conversions,
+    preferences: Preferences,
+    shared: SharedLink? = null,
+    onSharedHandled: () -> Unit = {},
+) {
     val items by downloads.items.collectAsState()
     val converting by conversions.items.collectAsState()
     var converts by remember { mutableStateOf<DownloadItem?>(null) }
     var adding by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     var prefill by remember { mutableStateOf("") }
     var prefillError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(shared) {
@@ -138,7 +149,10 @@ fun HomeScreen(downloads: Downloads, conversions: Conversions, shared: SharedLin
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
-                actions = { TextButton(onClick = { showAbout = true }) { Text("About") } },
+                actions = {
+                    TextButton(onClick = { showSettings = true }) { Text("Settings") }
+                    TextButton(onClick = { showAbout = true }) { Text("About") }
+                },
             )
         },
         floatingActionButton = {
@@ -162,6 +176,7 @@ fun HomeScreen(downloads: Downloads, conversions: Conversions, shared: SharedLin
         }
     }
     if (showAbout) AboutDialog(onDismiss = { showAbout = false })
+    if (showSettings) SettingsDialog(preferences, onDismiss = { showSettings = false })
     converts?.let { item ->
         ConvertDialog(item, onDismiss = { converts = null }) { format ->
             conversions.start(ConvertInput(item.savedUri!!, item.savedName ?: item.fileName ?: "download"), format)
@@ -172,9 +187,10 @@ fun HomeScreen(downloads: Downloads, conversions: Conversions, shared: SharedLin
         AddUrlDialog(
             initialUrl = prefill,
             initialError = prefillError,
+            videoPages = preferences.videoPagesEnabled,
             onDismiss = { adding = false },
-            onAdd = { url ->
-                downloads.add(url) // throws for a bad address: the dialog shows why
+            onAdd = { url, choice ->
+                downloads.add(url, choice) // throws for a bad address: the dialog shows why
                 adding = false
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -204,16 +220,24 @@ private fun EmptyList(modifier: Modifier) {
 }
 
 @Composable
-private fun AddUrlDialog(initialUrl: String, initialError: String?, onDismiss: () -> Unit, onAdd: (String) -> Unit) {
+private fun AddUrlDialog(
+    initialUrl: String,
+    initialError: String?,
+    videoPages: Boolean,
+    onDismiss: () -> Unit,
+    onAdd: (String, VideoChoice?) -> Unit,
+) {
     val clipboard = LocalClipboardManager.current
     // The clipboard is read only when the user taps Paste: reading it by itself would show
     // Android's "SDM accessed the clipboard" notice (seen on the owner's phone, Android 16).
     var url by remember { mutableStateOf(initialUrl) }
     var error by remember { mutableStateOf(initialError) }
+    var choice by remember { mutableStateOf<VideoChoice?>(null) } // null: the file itself
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add URL") },
         text = {
+            Column {
             OutlinedTextField(
                 value = url,
                 onValueChange = {
@@ -233,11 +257,22 @@ private fun AddUrlDialog(initialUrl: String, initialError: String?, onDismiss: (
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (videoPages) {
+                // Download as (M15b): the file at this address, or a video page read by yt-dlp.
+                Text("Download as", style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = choice == null, onClick = { choice = null }, label = { Text("File") })
+                    for (option in VideoChoice.entries) {
+                        FilterChip(selected = choice == option, onClick = { choice = option }, label = { Text(option.label) })
+                    }
+                }
+            }
+            }
         },
         confirmButton = {
             TextButton(onClick = {
                 try {
-                    onAdd(url)
+                    onAdd(url, choice)
                 } catch (e: SdmException) {
                     error = e.message
                 }
@@ -310,7 +345,7 @@ internal fun statusLine(item: DownloadItem): String {
     }
     return when (item.state) {
         DownloadState.QUEUED -> "Waiting"
-        DownloadState.DOWNLOADING -> buildList {
+        DownloadState.DOWNLOADING -> if (item.videoChoice != null && item.fileName == null) "Reading the video page…" else buildList {
             add(if (item.connections > 1) "Downloading · ${item.connections} connections" else "Downloading")
             add(size)
             item.bytesPerSecond?.takeIf { it > 0 }?.let { add(Units.formatSpeed(it)) }
@@ -416,5 +451,53 @@ private fun ConversionRow(conversion: Conversion, conversions: Conversions) {
                 }
             }
         }
+    }
+}
+
+/** Settings: video pages (M15b), off until the user accepts the notice. */
+@Composable
+private fun SettingsDialog(preferences: Preferences, onDismiss: () -> Unit) {
+    var notice by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Settings") },
+        text = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Download from video pages", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Adds 720p, 1080p, MP3 and M4A to Add URL, using the yt-dlp built into SDM.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = preferences.videoPagesEnabled,
+                    onCheckedChange = { on -> if (on) notice = true else preferences.setVideoPages(false) },
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
+    if (notice) {
+        AlertDialog(
+            onDismissRequest = { notice = false },
+            title = { Text("Before you turn this on") },
+            text = {
+                Text(
+                    "Video pages are read with yt-dlp, built into SDM. You are responsible for following each " +
+                        "site's terms and for having the right to download what you save.\n\n" +
+                        "SDM never uses your accounts, cookies or logins, and can't download DRM-protected " +
+                        "videos or anything behind a paywall.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    preferences.setVideoPages(true)
+                    notice = false
+                }) { Text("I understand, turn on") }
+            },
+            dismissButton = { TextButton(onClick = { notice = false }) { Text("Cancel") } },
+        )
     }
 }

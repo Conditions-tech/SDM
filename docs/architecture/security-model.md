@@ -93,6 +93,12 @@ The Android engine (`android/engine`) applies the same rules with its own code a
   the history is deleted only if it is SDM's own `.sdmpart` in that folder. Finished files go
   to Download/SDM through MediaStore, which never replaces a file. SDM never opens a download.
   Permissions: INTERNET, FOREGROUND_SERVICE(_DATA_SYNC), POST_NOTIFICATIONS (asked, optional).
+- Video pages (M15b, ADR-0023): yt-dlp only reads the page (no cookies, no downloads, silent);
+  the page address is checked by the network policy first (`checkDestination`), and every
+  stream is downloaded by SDM's engine, so media hosts are checked too. Request headers from
+  the page pass an allow-list (never Cookie or Authorization; short printable values only).
+  Still not covered: the hosts yt-dlp itself contacts while reading the page after redirects
+  or API calls.
 - A fix to a safety rule must be made in both engines.
 
 ## Environment notes

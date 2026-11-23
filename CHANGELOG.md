@@ -22,6 +22,9 @@ while SDM is in 0.x.
 - M15a: the Android converter: Convert a finished download to MP4 or M4A (no quality loss) or
   MP3 (LAME), with progress, Cancel and notifications; Python 3.13, yt-dlp and LAME are now
   inside the app (About lists them and their licences).
+- M15b: video pages on Android (Settings, off by default, with a terms notice): 720p, 1080p,
+  MP3 or M4A from a page's address; yt-dlp lists the streams and SDM's own engine downloads
+  them, then Android joins them.
 - M13 marked done: the owner reported the 1.2.0 checks done (install, the new icon, adding
   the extension with the assistant, the button over videos, a normal link opening SDM). This
   also closes the install checks left open in M11 and M12 (roadmap).

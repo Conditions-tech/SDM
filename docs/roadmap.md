@@ -592,4 +592,20 @@ as well as M4A. The first Android release (M14f) comes after M15.
 - M15b: video pages with yt-dlp in Chaquopy: Settings switch + terms notice; 720p, 1080p, MP3,
   M4A; MP4+M4A streams merged by MediaMuxer; pause/resume/cancel in the list; tests with a
   fake yt-dlp and a local page; one real check on the owner's phone, with their OK.
+  Built on 2026-11-23. Before building, with the owner's OK: yt-dlp 2026.10.26 without a
+  JavaScript runtime listed 24 formats for YouTube's "Me at the zoo" (warning "n challenge
+  solving failed"), and the first bytes of streams 140 (M4A) and 160 (MP4) came back as normal
+  `206` replies in 0.22 s and 0.06 s (in memory, nothing kept): works today, a recorded risk.
+  Design: yt-dlp only lists the page's direct http(s) streams (`sdm_media.extract`, no cookies,
+  no downloads, silent); SDM's engine downloads them (network policy, resume, connections, an
+  allow-list of request headers: User-Agent, Referer, Origin, Accept, Accept-Language);
+  `VideoPages.choose` takes H.264 MP4 video and AAC audio no higher than asked; MediaMuxer joins
+  them; MP3/M4A reuse the converter. The page address is checked (`checkDestination`) before
+  yt-dlp reads it. Settings switch, off by default, with the terms notice; Add URL's "Download
+  as". Pause/resume of a video works while SDM runs; after a restart it starts over. History
+  schema 2 (`video_choice`). Checked: 72 engine tests, 33 app tests (three runs), the Python
+  part on the PC against a local page (`android/tools/check_extract.py`), and 8 tests on the
+  owner's phone (yt-dlp in Chaquopy reading a page served on the phone; MediaMuxer joining a
+  video-only and an audio-only file; the 6 converter tests). Found by the tests: a title such
+  as "part 1/2" lost its first half (slashes in titles now become `_`).
 - M15c: sharing a video page asks "file or video?" and the quality.
