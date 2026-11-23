@@ -725,7 +725,10 @@ whole phone's media after Android's permission. Steps (each to be approved befor
   without it Android shows SDM only its own files). Video thumbnails come from Android. Media3
   moves to M17b, where playback starts. Checked: app tests, lint 0 errors, and on the owner's
   phone (test build, which replaced 1.0.0 with the owner's OK) both tabs open with the access
-  card, search, views and sorting; no crash. Not yet seen: the lists with real media.
+  card, search, views and sorting; no crash. After the owner allowed access (both READ_MEDIA
+  permissions granted), the Music tab listed the phone's audio with durations and the Videos
+  tab showed thumbnails, length, quality, size and folder (e.g. "Me at the zoo", 240p,
+  Download/SDM). Note: Android marks WhatsApp audio as music, so it appears in Songs.
 - M17b: music player: queue, shuffle, repeat, background play, notification and lock-screen
   controls (MediaSession), playlists.
 - M17c: video player: full screen, swipe for brightness/volume/seek, double-tap +/-10 s, speed,
