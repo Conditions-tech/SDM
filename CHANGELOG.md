@@ -6,6 +6,11 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
+## [android-1.0.0] - 2026-11-23
+
+SDM for Android 1.0.0, the first Android release (M14, M15). The entries below record how it
+was built.
+
 - M14 started: SDM for Android (ADR-0023). M14a: the `android/` Gradle project (Kotlin,
   Jetpack Compose, Android 10+) with the hexagon logo; a debug APK builds and GitHub Actions
   builds it on every push.

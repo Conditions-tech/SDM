@@ -19,8 +19,9 @@ and its tests have actually run and passed.
 | M11 | Open-source release on GitHub (Apache-2.0, UI/UX, more browsers) | Done (2026-10-25; owner's checks reported done with 1.2.0) |
 | M12 | Media: video/audio converter (ffmpeg) and optional yt-dlp add-on | Done (2026-10-26; owner's install check reported done with 1.2.0) |
 | M13 | SDM's own logo and look, a button over videos, the extension shipped with SDM | Done (2026-10-26) |
-| M14 | Android version: a native Kotlin app (APK) | In progress (release M14f after M15) |
-| M15 | Media on Android: converter (MP4, M4A, MP3) and video pages (yt-dlp, off by default) | Done (2026-11-23; released with M14f) |
+| M14 | Android version: a native Kotlin app (APK) | Done (2026-11-23; SDM for Android 1.0.0 released) |
+| M15 | Media on Android: converter (MP4, M4A, MP3) and video pages (yt-dlp, off by default) | Done (2026-11-23; released in Android 1.0.0) |
+| M17 | Android: music and video players | Planned (ADR-0025) |
 
 ## M0: Environment inspection (done)
 
@@ -552,7 +553,7 @@ the Edge Add-ons kit (`docs/store/edge-addons.md`). Not possible: Telegram and W
 files exist only inside their tab (`blob:`). Not tested against the real sites (tests use local
 servers only): the owner checks them in 1.3.0.
 
-## M14: Android version (in progress)
+## M14: Android version (done)
 
 Asked for by the owner on 2026-10-26; plan approved the same day (ADR-0023). Owner's choices:
 native Kotlin with Jetpack Compose, Android 10 or newer, device checks on the owner's phone over
@@ -625,6 +626,19 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
   says "The original file is no longer in Download/SDM" instead of "could not be saved".
   Merged main (desktop 1.2.1-1.3.3); the Android ADRs became 0023 and 0024. 814 Python tests,
   ruff clean.
+
+**M14 marked done on 2026-11-23: SDM for Android 1.0.0 released** (tag `android-v1.0.0`,
+`83c2216`; github.com/Conditions-tech/SDM/releases/tag/android-v1.0.0, not marked latest).
+Release assets: `SDM-android-1.0.0.apk` (45,613,750 bytes, SHA-256 `3409feed…bdad2b`),
+`SHA256SUMS.txt`, `THIRD_PARTY_NOTICES.md`. Checked: Checks passed on `main` (desktop 3.12 and
+3.14, extension, Android); the downloaded APK matches its published SHA-256 and is signed
+`CN=Conditions-tech`; installed on the owner's phone it opened (0.7 s, no crash) and the
+installed APK has the same signature and fingerprint. The release took four tries, none
+published: the key text pasted from the clipboard was wrong (91 characters instead of
+thousands) and the two passwords differed. Fixed with a tolerant unpack step, a key check
+before the build, and `.github/workflows/android-key-check.yml` (run by hand, prints only
+sizes, aliases and a RESULT line). Owner's tip for next time: copy the key text from a file
+opened in Notepad, not straight from PowerShell's clipboard.
 
 Left out of the first version: the native-messaging bridge, the Windows installer, the
 converter and yt-dlp, scheduler times and days, the speed limit.
