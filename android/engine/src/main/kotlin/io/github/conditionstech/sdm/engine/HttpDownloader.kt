@@ -3,7 +3,9 @@ package io.github.conditionstech.sdm.engine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -46,9 +48,11 @@ class HttpDownloader(
     dns: Dns = Dns.SYSTEM,
     configureClient: (OkHttpClient.Builder) -> Unit = {},
 ) {
+    private val checkingDns = PolicyDns(policy, dns)
+
     private val client: OkHttpClient = OkHttpClient.Builder()
         .apply(configureClient)
-        .dns(PolicyDns(policy, dns))
+        .dns(checkingDns)
         .proxy(Proxy.NO_PROXY) // a proxy would hide the real destination from the policy
         .followRedirects(false) // followed by hand: every hop is checked
         .followSslRedirects(false)
@@ -81,12 +85,14 @@ class HttpDownloader(
         listener: DownloadListener = object : DownloadListener {},
         resumeFrom: PartialDownload? = null,
         keepPartial: Boolean = false,
+        requestHeaders: Map<String, String> = emptyMap(),
     ): DownloadResult {
         Urls.validate(url)
         if (!directory.isDirectory) {
             throw DownloadException("The download folder does not exist: ${directory.name}")
         }
         val transfer = Transfer.start(directory, resumeFrom)
+        transfer.headers = allowedHeaders(requestHeaders)
         try {
             var attempt = 1
             while (true) {
@@ -107,6 +113,19 @@ class HttpDownloader(
         }
     }
 
+    /**
+     * Checks that [url] may be visited at all (its shape, an IP literal, or what its host name
+     * resolves to), without sending anything. For addresses another tool will open, such as a
+     * video page read by yt-dlp (M15b). Throws [InvalidUrlException] or [BlockedDestinationException].
+     */
+    suspend fun checkDestination(url: String) {
+        val parsed = Urls.validate(url)
+        policy.checkUrlHost(parsed.host)
+        if (NetworkPolicy.parseIpLiteral(parsed.host) == null) {
+            withContext(Dispatchers.IO) { translated(parsed.host) { checkingDns.lookup(parsed.host) } }
+        }
+    }
+
     private fun keep(e: Throwable, transfer: Transfer, keepPartial: Boolean): Boolean = when {
         !keepPartial -> false
         e is CancellationException -> true // the caller deletes it unless this was a pause
@@ -124,6 +143,7 @@ class HttpDownloader(
         var resumable = false
         var segments: List<Segment>? = null // set while the download is split
         var noSplit = false // after a failed split, stay on one connection
+        var headers: Map<String, String> = emptyMap() // the caller's allowed extra headers
 
         fun partial() = PartialDownload(part!!, fileName!!, total, etag, lastModified, resumable, segments)
 
@@ -207,7 +227,7 @@ class HttpDownloader(
         }
         var plan = rangePlan(transfer)
         while (true) {
-            val opened = getFollowingRedirects(url, plan?.headers().orEmpty())
+            val opened = getFollowingRedirects(url, transfer.headers + plan?.headers().orEmpty())
             try {
                 val response = opened.response
                 val offset: Long? = try {
@@ -273,7 +293,7 @@ class HttpDownloader(
         val segments = transfer.segments ?: throw StartOver("no parts map")
         SegmentedDownload(
             // Every part request goes through the same redirect checks and network policy.
-            request = { headers -> getFollowingRedirects(url, headers) },
+            request = { headers -> getFollowingRedirects(url, transfer.headers + headers) },
             partFile = part,
             total = total,
             ifRange = ifRange,
@@ -404,9 +424,9 @@ class HttpDownloader(
             val request = Request.Builder()
                 .url(parsed)
                 .header("User-Agent", settings.userAgent)
+                .apply { extraHeaders.forEach { (name, value) -> header(name, value) } }
                 // "identity" asks for the file exactly as stored, so sizes match Content-Length.
                 .header("Accept-Encoding", "identity")
-                .apply { extraHeaders.forEach { (name, value) -> header(name, value) } }
                 .build()
             val call = client.newCall(request)
             val response = cancellable(call) { translated(parsed.host) { call.execute() } }
@@ -461,6 +481,23 @@ class HttpDownloader(
         private val REDIRECT_STATUSES = setOf(301, 302, 303, 307, 308)
         private val RETRYABLE_STATUSES = setOf(408, 429)
         const val OVERLAP = 64 // bytes re-downloaded to check a resume without version tags
+
+        /**
+         * The extra headers a caller may send (video pages, M15b): the few a site asks for to
+         * serve a stream, from untrusted page data. Never cookies or authorization; values must
+         * be short printable text. Anything else is dropped.
+         */
+        fun allowedHeaders(headers: Map<String, String>): Map<String, String> {
+            val allowed = mapOf(
+                "user-agent" to "User-Agent", "referer" to "Referer", "origin" to "Origin",
+                "accept" to "Accept", "accept-language" to "Accept-Language",
+            )
+            return headers.mapNotNull { (name, value) ->
+                val canonical = allowed[name.trim().lowercase()] ?: return@mapNotNull null
+                val clean = value.trim()
+                if (clean.isEmpty() || clean.length > 512 || clean.any { it.code < 0x20 || it.code > 0x7E }) null else canonical to clean
+            }.toMap()
+        }
 
         /** True if [part] is a .sdmpart file directly inside [directory]. */
         fun isOwnPartFile(part: File, directory: File): Boolean = try {
