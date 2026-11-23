@@ -62,6 +62,15 @@ shown there; the first is typing `chrome://extensions` in the browser's address 
 Start SDM normally (from the Start menu). If it runs **as administrator**, Windows doesn't let
 the browser reach it, and SDM shows a warning.
 
+## SDM for Android
+
+SDM also runs on Android phones (Android 10 or newer, 64-bit): the same fast downloads with
+pause and resume, **Share → Download with SDM** from any app, a converter (MP4, M4A, MP3) and,
+if you turn them on in Settings, video pages (YouTube, Facebook, Instagram and more; public
+videos only, never with your accounts). Download `SDM-android-<version>.apk` from the
+[releases](../../releases) (look for "SDM for Android") and open it on your phone; Android asks
+once to allow installing it. The source is in [android/](android/).
+
 ## Build from source
 
 You need Windows 10/11, [uv](https://docs.astral.sh/uv/) and Git. uv installs the right

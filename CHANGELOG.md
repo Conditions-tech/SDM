@@ -27,6 +27,9 @@ while SDM is in 0.x.
   them, then Android joins them.
 - Video pages: Facebook and Instagram videos now download (their ready-made MP4s were being
   skipped), AV1 video on Android 14+, and "720p" works for portrait videos.
+- M14f: SDM for Android 1.0.0 is prepared for release (signed APK from GitHub Actions on an
+  `android-v*` tag); About shows the name and version only; a conversion whose original was
+  deleted says so.
 - M15c: sharing a video page to SDM starts Add URL on 720p (or says how to turn video pages on).
 
 ## [1.3.3] - 2026-11-22

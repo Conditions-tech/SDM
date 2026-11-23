@@ -611,6 +611,20 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
   shared text has no http:// or https:// link." Nothing downloaded by itself.
 - M14f: a signed release APK from GitHub Actions, the owner's check on their phone, the
   release notes and social post drafts.
+  Prepared on 2026-11-23: version 1.0.0 (Android has its own versions; tags `android-v*`,
+  which the desktop's `v*` release doesn't match); the release key comes from GitHub secrets
+  (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+  `ANDROID_KEY_PASSWORD`), else a local build is signed with the debug key;
+  `.github/workflows/android-release.yml` checks the tag, tests, builds, refuses a
+  debug-signed APK (checked locally: apksigner shows "CN=Android Debug" on a test build), and
+  publishes `SDM-android-<version>.apk`, `THIRD_PARTY_NOTICES.md` and SHA-256 sums with
+  `--latest=false` (the README's "latest release" stays Windows). The release build (R8,
+  45.6 MB, both 64-bit ABIs) on the owner's phone: About 1.0.0, a shared video page downloaded
+  and converted to MP3 (ffprobe: MP3 44.1 kHz stereo, 19.1 s). Found on the way: the owner's
+  Download/SDM test files had been deleted in the phone's Files/Gallery app; converting one now
+  says "The original file is no longer in Download/SDM" instead of "could not be saved".
+  Merged main (desktop 1.2.1-1.3.3); the Android ADRs became 0023 and 0024. 814 Python tests,
+  ruff clean.
 
 Left out of the first version: the native-messaging bridge, the Windows installer, the
 converter and yt-dlp, scheduler times and days, the speed limit.
