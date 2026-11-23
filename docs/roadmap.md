@@ -576,6 +576,10 @@ as well as M4A. The first Android release (M14f) comes after M15.
 - M15a: the converter: MP4 (rewrap) and M4A (audio) with Android's MediaExtractor/MediaMuxer,
   MP3 with MediaCodec + LAME (`lameenc` in Chaquopy, Python 3.13); progress, cancel, results in
   Download/SDM; tests with synthetic media.
+  Step 1 done (2026-11-23): Chaquopy 17.2.0 with Python 3.13, yt-dlp 2026.10.26 and lameenc
+  1.7.0 in the app (debug APK 31 -> 74 MB, both 64-bit ABIs); an About screen with versions and
+  licences. On the owner's phone (Android 16) About listed both tools, so Python starts there;
+  the app opened in 1.2 s, no crash.
 - M15b: video pages with yt-dlp in Chaquopy: Settings switch + terms notice; 720p, 1080p, MP3,
   M4A; MP4+M4A streams merged by MediaMuxer; pause/resume/cancel in the list; tests with a
   fake yt-dlp and a local page; one real check on the owner's phone, with their OK.
