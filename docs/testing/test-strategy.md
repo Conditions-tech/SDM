@@ -60,6 +60,7 @@ ranges, send the wrong range, ignore `If-Range`, throttle, drop a reply halfway)
 Tests that need a phone live in `android/app/src/androidTest` and run with
 `.\gradlew.bat :app:connectedDebugAndroidTest` (phone on USB). `ConverterDeviceTest` uses three
 tiny synthetic media files made with ffmpeg (`androidTest/assets`), never downloaded media.
+Careful: the run uninstalls SDM from the phone afterwards, which deletes its history.
 
 ## Rules
 

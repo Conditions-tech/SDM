@@ -608,4 +608,9 @@ as well as M4A. The first Android release (M14f) comes after M15.
   owner's phone (yt-dlp in Chaquopy reading a page served on the phone; MediaMuxer joining a
   video-only and an audio-only file; the 6 converter tests). Found by the tests: a title such
   as "part 1/2" lost its first half (slashes in titles now become `_`).
+  Real check on the owner's phone (owner-approved, 2026-11-23): Settings showed the notice;
+  YouTube's "Me at the zoo" as 720p finished in under 25 s as `Me at the zoo.mp4` in
+  Download/SDM, 743,777 bytes; ffprobe: H.264 320x240 + AAC, 19.06 s (the best H.264 this
+  video has); no crash. Note: `connectedDebugAndroidTest` uninstalls SDM afterwards, which
+  wipes the phone's SDM history (files in Download/SDM stay).
 - M15c: sharing a video page asks "file or video?" and the quality.
