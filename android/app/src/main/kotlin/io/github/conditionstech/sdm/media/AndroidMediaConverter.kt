@@ -28,8 +28,14 @@ import java.nio.ByteOrder
 class AndroidMediaConverter(private val context: Context) : MediaConverter {
     override suspend fun convert(input: ConvertInput, format: ConvertFormat, output: File, onProgress: (Float) -> Unit) =
         withContext(Dispatchers.IO) {
-            val file = context.contentResolver.openFileDescriptor(Uri.parse(input.uri), "r")
-                ?: throw ConversionException("SDM can't read the downloaded file any more (was it moved or deleted?).")
+            // A finished download can be deleted or moved in the Files or Gallery app (seen on the
+            // owner's phone: Xiaomi moves deleted files to a hidden trash folder).
+            val gone = "The original file is no longer in Download/SDM: it was moved or deleted."
+            val file = try {
+                context.contentResolver.openFileDescriptor(Uri.parse(input.uri), "r")
+            } catch (e: java.io.FileNotFoundException) {
+                throw ConversionException(gone)
+            } ?: throw ConversionException(gone)
             file.use {
                 when (format) {
                     ConvertFormat.MP4 -> rewrap(it.fileDescriptor, output, audioOnly = false, onProgress)

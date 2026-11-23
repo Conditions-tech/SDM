@@ -52,6 +52,7 @@ class SdmApplication : Application() {
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
             onActive = { DownloadService.start(this) },
             onFinished = { Notifications.converted(this, it) },
+            log = { message, error -> android.util.Log.w("SDM", message, error) },
         )
     }
 }

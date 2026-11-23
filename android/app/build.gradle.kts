@@ -15,16 +15,33 @@ android {
         applicationId = "io.github.conditionstech.sdm"
         minSdk = 29 // Android 10: Download/SDM through MediaStore without a storage permission.
         targetSdk = 37
+        // The Android app has its own versions, released with tags like android-v1.0.0 (M14f).
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
         // Tests that need a phone (the real media converter): gradlew connectedDebugAndroidTest
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Chaquopy's Python 3.12+ exists for 64-bit phones only (ADR-0024).
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
+    // The release key never enters Git (ADR-0023): GitHub Actions decodes it from a secret and
+    // passes its path and passwords in SDM_KEYSTORE* variables. Without them (a test build on
+    // a PC) the release build is signed with the debug key, so it can't be mistaken for SDM's.
+    val releaseKey = System.getenv("SDM_KEYSTORE")
+    signingConfigs {
+        create("release") {
+            if (releaseKey != null) {
+                storeFile = file(releaseKey)
+                storePassword = System.getenv("SDM_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("SDM_KEY_ALIAS")
+                keyPassword = System.getenv("SDM_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName(if (releaseKey != null) "release" else "debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))

@@ -67,6 +67,7 @@ class Conversions(
     private val scope: CoroutineScope,
     private val onActive: () -> Unit = {},
     private val onFinished: (Conversion) -> Unit = {},
+    private val log: (String, Throwable) -> Unit = { _, _ -> }, // Android's log on the phone
 ) {
     private val nextId = AtomicLong(1)
     private val jobs = HashMap<Long, Job>()
@@ -105,8 +106,10 @@ class Conversions(
         } catch (e: ConversionException) {
             finish(conversion.id) { it.copy(state = ConversionState.FAILED, error = e.message) }
         } catch (e: IOException) {
+            log("Conversion ${conversion.id} failed", e)
             finish(conversion.id) { it.copy(state = ConversionState.FAILED, error = "The converted file could not be saved to Download/SDM.") }
         } catch (e: Exception) { // Android's media tools throw plain exceptions for files they can't read
+            log("Conversion ${conversion.id} failed", e)
             finish(conversion.id) {
                 it.copy(state = ConversionState.FAILED, error = "Android could not read or convert this file (${e.javaClass.simpleName}).")
             }
