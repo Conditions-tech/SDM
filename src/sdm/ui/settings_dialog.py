@@ -23,9 +23,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from sdm.engine.proxy import parse_proxy
 from sdm.media.ffmpeg import INSTALL_HINT, find_ffmpeg
 from sdm.media.ytdlp import INSTALL_HINT as YTDLP_HINT
-from sdm.media.ytdlp import TERMS_NOTICE, find_ytdlp
+from sdm.media.ytdlp import LOGIN_BROWSERS, TERMS_NOTICE, find_ytdlp
 from sdm.ui.preferences import MAX_SPEED_LIMIT_KIB, Preferences
 from sdm.ui.theme import MODE_LABELS, MODES
 
@@ -103,6 +104,18 @@ class SettingsDialog(QDialog):
         note = QLabel("The speed limit is shared by all downloads and applies at once.")
         note.setWordWrap(True)
         connections_form.addRow(note)
+        # M16 (ADR-0022): an optional HTTP proxy, such as a BDIX proxy from the user's ISP.
+        self.proxy_edit = QLineEdit(preferences.proxy.removeprefix("http://"))
+        self.proxy_edit.setPlaceholderText("Off. To use one: host:port, e.g. 10.10.10.10:8080")
+        connections_form.addRow("HTTP proxy (optional):", self.proxy_edit)
+        proxy_note = QLabel(
+            "Downloads and video pages then go through this proxy. Use only one you trust, "
+            "such as one your ISP gives you: it sees which sites you download from (https "
+            "files stay encrypted). Leave empty to connect directly."
+        )
+        proxy_note.setWordWrap(True)
+        proxy_note.setProperty("muted", True)
+        connections_form.addRow(proxy_note)
 
         # Notifications and tray
         self.notify_check = QCheckBox(
@@ -149,9 +162,25 @@ class SettingsDialog(QDialog):
         self._update_ytdlp_status()
         video_note = QLabel(
             "Off until you turn it on. Then Add URL can download a video page with yt-dlp. "
-            "You're responsible for each site's terms; SDM never signs in or uses cookies."
+            "You're responsible for each site's terms. SDM never signs in itself."
         )
         video_note.setWordWrap(True)
+        # M15, opt-in: pages that need a login (Facebook, Instagram) can use one browser's.
+        self.login_box = QComboBox()
+        self.login_box.addItem("No login (public videos only)", "")
+        for key, name in LOGIN_BROWSERS.items():
+            self.login_box.addItem(f"Use my {name} login", key)
+        self.login_box.setCurrentIndex(
+            max(0, self.login_box.findData(preferences.video_login_browser))
+        )
+        login_note = QLabel(
+            "For videos that need you to be logged in. yt-dlp then reads that browser's login "
+            "for the site you download from. Anyone using SDM on this PC could download with "
+            "your account. Firefox works best: Chrome and Edge often protect their logins on "
+            "Windows, and must be closed while SDM reads them."
+        )
+        login_note.setWordWrap(True)
+        login_note.setProperty("muted", True)
         media = QWidget()
         media_form = QFormLayout(media)
         media_form.addRow("ffmpeg (for Convert):", ffmpeg_row)
@@ -160,6 +189,8 @@ class SettingsDialog(QDialog):
         media_form.addRow("yt-dlp (for video pages):", ytdlp_row)
         media_form.addRow(self.ytdlp_status)
         media_form.addRow(video_note)
+        media_form.addRow("Login for video pages:", self.login_box)
+        media_form.addRow(login_note)
 
         self.tabs = QTabWidget()
         self.tabs.addTab(general, "General")
@@ -193,6 +224,8 @@ class SettingsDialog(QDialog):
             ffmpeg_path=self.ffmpeg_edit.text().strip(),
             video_enabled=self.video_check.isChecked(),
             ytdlp_path=self.ytdlp_edit.text().strip(),
+            video_login_browser=self.login_box.currentData(),
+            proxy=parse_proxy(self.proxy_edit.text()) or "",
         )
 
     def accept(self) -> None:
@@ -200,6 +233,13 @@ class SettingsDialog(QDialog):
         if folder and not Path(folder).is_dir():
             self.tabs.setCurrentIndex(0)
             self.error_label.setText(f"The folder doesn't exist: {folder}")
+            self.error_label.show()
+            return
+        try:
+            parse_proxy(self.proxy_edit.text())
+        except ValueError as exc:
+            self.tabs.setCurrentIndex(1)
+            self.error_label.setText(str(exc))
             self.error_label.show()
             return
         for edit in (self.ffmpeg_edit, self.ytdlp_edit):

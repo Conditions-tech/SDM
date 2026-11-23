@@ -17,8 +17,9 @@ from sdm.core.filenames import numbered_name, sanitize_filename
 INSTALL_HINT = "Install it for free with: winget install yt-dlp.yt-dlp"
 TERMS_NOTICE = (
     "SDM will use yt-dlp to download from video pages you choose. You are responsible for "
-    "following each site's terms of use and copyright. SDM never signs in, never uses your "
-    "browser's cookies, and never downloads DRM-protected or paid-only videos."
+    "following each site's terms of use and copyright. SDM never signs in itself, uses your "
+    "browser's login only if you turn that on (Settings > Media), and never downloads "
+    "DRM-protected or paid-only videos."
 )
 PROGRESS_MARK = "SDMPROGRESS"
 WORK_PREFIX = ".sdm-video-"
@@ -90,16 +91,31 @@ def is_own_work_folder(path: Path, folder: Path) -> bool:
     return inside and path.name.startswith(WORK_PREFIX) and suffix.isdigit()
 
 
+# M15, the owner's choice: an opt-in setting lets yt-dlp use one browser's login (its cookies)
+# for video pages that need it (Facebook, Instagram). Off by default.
+LOGIN_BROWSERS = {"firefox": "Firefox", "chrome": "Google Chrome", "edge": "Microsoft Edge",
+                  "brave": "Brave"}  # fmt: skip
+
+
 def ytdlp_arguments(
-    url: str, quality: VideoQuality, work: Path, *, ffmpeg: Path | None = None
+    url: str,
+    quality: VideoQuality,
+    work: Path,
+    *,
+    ffmpeg: Path | None = None,
+    login_browser: str | None = None,
+    proxy: str | None = None,
 ) -> list[str]:
     """yt-dlp's arguments (without the program). --ignore-config first: a config file could
-    otherwise add options such as --exec. The address comes last, after "--"."""
+    otherwise add options such as --exec. The address comes last, after "--". Cookies only
+    from `login_browser`, when the user turned that on; never from a file."""
+    cookies = (["--cookies-from-browser", login_browser] if login_browser in LOGIN_BROWSERS
+               else ["--no-cookies-from-browser"])  # fmt: skip
     return [
         "--ignore-config",
         "--no-playlist",
         "--no-cookies",
-        "--no-cookies-from-browser",
+        *cookies,
         "--no-exec",
         "--newline",
         "--color", "never",
@@ -111,6 +127,7 @@ def ytdlp_arguments(
         "-P", str(work),
         "-o", "%(title).100B [%(id)s].%(ext)s",
         *(["--ffmpeg-location", str(ffmpeg)] if ffmpeg else []),
+        *(["--proxy", proxy] if proxy else []),  # the user's proxy (M16)
         *quality.arguments,
         "--",
         url,
@@ -178,13 +195,51 @@ class VideoProgress:
         return explain_failure(self.log)
 
 
+# yt-dlp 2026.10.21 on a page with no video (SDM's local test page, 2026-10-28): "WARNING:
+# [generic] Falling back on generic information extractor", then "ERROR: Unsupported URL: …".
+# The owner met it with Facebook's feed and a story (2026-10-28): the button sends the address
+# of the page it is on, and a feed or list isn't one video's page.
+NO_VIDEO_TEXT = (
+    "SDM found no video on this page. If it's a feed or a list of posts, open the video on its "
+    "own page (click its date or title) and try again. Stories and private posts need a login, "
+    "which SDM doesn't use."
+)
+LOGIN_TEXT = (
+    "This video needs a login (stories, private posts and groups usually do). SDM doesn't "
+    "sign in to sites or use your browser's cookies."
+)
+
+LOGIN_LOCKED_TEXT = (
+    "SDM couldn't read the browser's login while the browser is open. Close that browser "
+    "completely and try again."
+)
+LOGIN_ENCRYPTED_TEXT = (
+    "This browser protects its login data on Windows, so SDM can't use it. In Tools > "
+    "Settings > Media, choose Firefox for video-page logins (log in to the site in Firefox)."
+)
+
+# Since late 2025 yt-dlp needs a JavaScript runtime (Deno) to read YouTube's pages; without one
+# YouTube downloads fail in every format, MP3 included.
+NEEDS_DENO_TEXT = (
+    "YouTube needs a helper program that yt-dlp uses: install it for free with "
+    "winget install DenoLand.Deno, then restart SDM and try again."
+)
+
 _EXPLAINED = (
-    ("Unsupported URL", "yt-dlp doesn't know how to download from this page."),
+    ("JavaScript runtime", NEEDS_DENO_TEXT),
+    ("js runtime", NEEDS_DENO_TEXT),
+    ("challenge solving failed", NEEDS_DENO_TEXT),
+    ("Could not copy", LOGIN_LOCKED_TEXT),
+    ("cookie database", LOGIN_LOCKED_TEXT),
+    ("DPAPI", LOGIN_ENCRYPTED_TEXT),
+    ("App-Bound", LOGIN_ENCRYPTED_TEXT),
+    ("decrypt", LOGIN_ENCRYPTED_TEXT),
+    ("Unsupported URL", NO_VIDEO_TEXT),
     ("Requested format is not available",
      "This video isn't available in the chosen quality. Try a lower one."),
     ("DRM", "This video is DRM-protected. SDM doesn't download protected videos."),
-    ("Sign in", "This video needs a login. SDM doesn't sign in to sites."),
-    ("login", "This video needs a login. SDM doesn't sign in to sites."),
+    ("Sign in", LOGIN_TEXT),
+    ("login", LOGIN_TEXT),
     ("Private video", "This video is private."),
     ("members-only", "This video is for paying members only."),
     ("ffmpeg is not installed",

@@ -40,7 +40,7 @@ test("a video page is only its address, marked as a video", () => {
 
 test("the menu appears on http and https links and players only", () => {
   const item = menuItem();
-  assert.deepEqual(item.contexts, ["link", "video", "audio"]);
+  assert.deepEqual(item.contexts, ["link", "image", "video", "audio"]);
   assert.deepEqual(item.targetUrlPatterns, ["http://*/*", "https://*/*"]);
   assert.equal(item.title, "Download with SDM");
 });
@@ -69,6 +69,15 @@ test("a right-click on a player sends the player's own address", () => {
   );
   // a streaming player has no real file address
   assert.equal(menuMessage({ mediaType: "video", srcUrl: "blob:https://x/1", pageUrl: PAGE }), null);
+});
+
+test("a right-click on an image sends the image, even when it is inside a link", () => {
+  const picture = "https://images.example/pin/photo.jpg";
+  const message = menuMessage({ mediaType: "image", srcUrl: picture, linkUrl: LINK, pageUrl: PAGE });
+  assert.equal(message.url, picture);
+  assert.equal(message.referrer, PAGE);
+  // a picture drawn by the page itself (blob:, data:) has no address SDM can fetch
+  assert.equal(menuMessage({ mediaType: "image", srcUrl: "data:image/png;base64,AA", pageUrl: PAGE }), null);
 });
 
 test("links SDM doesn't download produce no message", () => {
@@ -122,7 +131,7 @@ test("replies turn into short, generic messages", () => {
 test("Chrome's errors say whether the bridge is installed", () => {
   assert.match(
     describeFailure(new Error("Specified native messaging host not found.")).text,
-    /isn't installed/,
+    /isn't connected to this browser.*Setup assistant/,
   );
   assert.match(
     describeFailure(new Error("Access to the specified native messaging host is forbidden.")).text,

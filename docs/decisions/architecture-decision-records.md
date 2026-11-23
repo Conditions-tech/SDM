@@ -485,6 +485,10 @@ deleted. A changed decision gets a new record that supersedes the old one.
     and SDM's Chrome registration (registry key and host files) but keeps the history,
     settings, logs and downloads. A fixed AppId lets new versions upgrade in place; a running
     SDM is closed first.
+    *Correction (2026-10-27):* because the settings survive and the registration doesn't, a
+    reinstall left browsers with no registration ("host not found"). SDM now records the
+    browsers the user connected (preference `browsers`) and re-registers broken ones at each
+    start (`MainWindow.reconnect_browsers`, `install.broken_registrations`).
   - **Chrome registration in the installed app:** Help > Set up Chrome integration registers
     `sdm-bridge-host.exe` directly (no `.bat`, no Python); Help > Remove Chrome integration.
     Run from the owner's SDM, it writes the owner's real registry (unlike Claude's sandboxed
@@ -617,10 +621,35 @@ deleted. A changed decision gets a new record that supersedes the old one.
     that folder's path, opens the browser's extensions page (the browser found through
     Windows' App Paths) and shows three steps. Browsers reload unpacked extensions from disk,
     so updating SDM also updates the extension after a browser restart.
+    *Correction (2026-10-27):* the extensions page never opens that way. Chrome and Edge
+    ignore `chrome://` / `edge://` pages passed by another program and show a new tab
+    (checked by starting each with a throwaway profile and reading its open tabs), so the
+    owner saw "no extension added". The guide now has four steps, the first being to type
+    the address in the browser's address bar.
 - **Consequences:** With the video button on, the extension can read every http(s) page the
   user opens (it only looks at video positions; the browser shows this permission). Chrome
   shows its "developer mode extensions" notice for unpacked extensions. The security model
   records both.
+
+## ADR-0022: An optional HTTP proxy (M16)
+
+- **Status:** Accepted (2026-11-22)
+- **Context:** The owner's ISP gives 200 Mbps to BDIX (Bangladesh's internet exchange) but
+  50 Mbps abroad. Some ISPs offer a proxy on BDIX that fetches international files for their
+  users. SDM ignored every proxy (`trust_env=False`), because a proxy resolves names itself and
+  so bypasses SDM's SSRF check (ADR-0007).
+- **Decision:** An opt-in setting, Settings > Connections > HTTP proxy, off by default. Only
+  `http://host:port` (parsed by `engine/proxy.py`); no SOCKS (it would need a new dependency)
+  and no proxy passwords (SDM keeps no secrets). With a proxy, aiohttp connects only to it;
+  before every request and redirect hop, `check_through_proxy` resolves the server's name in
+  SDM and applies the same `NetworkPolicy`, so a link still can't reach this computer or the
+  local network. https goes through `CONNECT` and stays encrypted end to end. yt-dlp gets the
+  same proxy (`--proxy`).
+- **Consequences:** The proxy can see which hosts the user downloads from (and whole http
+  downloads), so the setting tells the user to use only a proxy they trust. A small gap
+  remains: the proxy resolves the name again and could get a different answer than SDM
+  (DNS rebinding through the proxy); the proxy is the user's own choice, so this is
+  accepted. SDM doesn't promise more speed: that depends on the proxy and the ISP.
 
 ## ADR-0023: An Android version as a native Kotlin app
 

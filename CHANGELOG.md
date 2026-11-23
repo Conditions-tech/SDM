@@ -28,6 +28,94 @@ while SDM is in 0.x.
 - Video pages: Facebook and Instagram videos now download (their ready-made MP4s were being
   skipped), AV1 video on Android 14+, and "720p" works for portrait videos.
 - M15c: sharing a video page to SDM starts Add URL on 720p (or says how to turn video pages on).
+
+## [1.3.3] - 2026-11-22
+
+### Fixed
+
+- **Selecting with the mouse:** press in the empty space under the list and drag to draw a
+  box, as in File Explorer; every row it touches is selected (Ctrl or Shift adds to the
+  selection).
+
+## [1.3.2] - 2026-11-22
+
+### Added
+
+- **HTTP proxy (optional, off by default):** Settings > Connections can send downloads and
+  video pages through a proxy you trust, such as a BDIX proxy from your ISP. SDM still checks
+  every destination itself (ADR-0022).
+- **Select several downloads** (Ctrl- or Shift-click, Ctrl+A or Downloads > Select all) and
+  remove them together; choose **Remove from list** (files stay) or **Remove and delete
+  files** (finished files go to the Recycle Bin).
+
+### Fixed
+
+- The Status column was cut off at the window's edge; it now has a fixed, readable width.
+- A video converting to MP3 (or merging) looked stuck at its last speed; its status now says
+  "Converting to MP3…" or "Merging video and audio…".
+
+## [1.3.1] - 2026-11-22
+
+### Changed
+
+- **One download:** each release is a single `SDM-<version>.zip` holding the installer, the
+  Chromium extension and their checksums.
+
+### Fixed
+
+- **Facebook feed videos** (the owner's report, 2026-11-22): the SDM button sent
+  `facebook.com/`, which holds no single video. It now finds the post's own address
+  (`/posts/`, `/videos/`, `/share/v/`, `permalink.php`); on a home feed with no post nearby it
+  says "Open the video first" instead of sending a download that can only fail.
+
+## [1.3.0] - 2026-11-22
+
+### Added
+
+- **Download images with SDM:** right-click any picture (Instagram, Pinterest, any page) and
+  choose Download with SDM; a picture inside a link sends the picture.
+- **Login for video pages (optional, off by default):** Settings > Media can let yt-dlp use one
+  browser's login (Firefox works best) for videos that need it, such as Facebook and Instagram
+  posts. SDM explains when a browser is open or protects its login on Windows.
+- **The SDM button on feeds** (TikTok, Pinterest boards, profiles) sends the clicked video's own
+  post instead of the feed's address.
+- A clear hint when YouTube needs yt-dlp's helper: `winget install DenoLand.Deno`.
+- The Edge Add-ons kit: a privacy policy (`PRIVACY.md`), store texts and images.
+
+### Fixed
+
+- **MP3 chosen, a .webm marked Completed** (the owner's report, 2026-11-22): when yt-dlp can't
+  convert the audio (no ffmpeg), SDM now says so and Retry converts it after installing ffmpeg.
+
+- **Telegram Web downloads failed in SDM** (reported by the owner, 2026-10-28). Telegram Web
+  builds each file inside its open tab and gives the browser an address only that tab can
+  answer; asked directly, `web.telegram.org/k/d/...` redirects to the app's HTML page. The
+  extension now leaves downloads from `web.telegram.org` to the browser.
+- **A plain reason when a page has no video** (reported by the owner with Facebook's feed and
+  a story, 2026-10-28). The video button sends the address of the page it is on; on a feed
+  that is the feed's address, and yt-dlp finds no video there ("Unsupported URL"). SDM now
+  says to open the video on its own page, and that stories and private posts need a login,
+  instead of "yt-dlp doesn't know how to download from this page".
+
+## [1.2.1] - 2026-10-27
+
+### Fixed
+
+- **"Add to Chrome" seemed to do nothing** (reported by the owner, 2026-10-27). The button
+  opens the browser and copies the extension's folder, but the browser showed a blank new tab:
+  Chrome and Edge refuse to open their own extensions page for another program. The steps now
+  start with typing `chrome://extensions` (or `edge://`, `brave://`) in the address bar, and no
+  longer say the page opened.
+- **"Specified native messaging host not found" after reinstalling SDM** (reported by the
+  owner and some users, 2026-10-27). Uninstalling SDM removes its browser registration, and
+  reinstalling never put it back: the welcome assistant runs only once and its "done" flag
+  survives the uninstall. SDM now remembers which browsers you connected and, at every start,
+  re-registers any whose registration is missing or points at a program that isn't there. An
+  SDM upgraded from 1.2.0 adopts what is registered, or asks once (the assistant's browsers
+  page) if nothing is. The extension's message now says to open SDM or run Help > Setup
+  assistant, instead of only "quit Chrome completely".
+
+### Changed
 - M13 marked done: the owner reported the 1.2.0 checks done (install, the new icon, adding
   the extension with the assistant, the button over videos, a normal link opening SDM). This
   also closes the install checks left open in M11 and M12 (roadmap).

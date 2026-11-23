@@ -33,6 +33,7 @@ class DownloadSettings:
     min_part_size: int = 1024 * 1024
     dynamic_splitting: bool = True  # free connections take over half of the biggest part (M5b)
     user_agent: str = f"SDM/{__version__}"
+    proxy: str | None = None  # "http://host:port" from parse_proxy (M16, ADR-0022); None: direct
 
 
 @dataclass(frozen=True)

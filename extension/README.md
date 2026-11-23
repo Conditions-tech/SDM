@@ -21,11 +21,13 @@ The extension comes with SDM (in `SDM\extension` next to SDM.exe).
 
 1. **SDM's welcome assistant** (on first start; later **Help > Add the browser extension**)
    registers SDM for the browsers you tick.
-2. **Press "Add to Chrome"** (or Edge, Brave) there. The browser's extensions page opens and
-   SDM copies the extension's folder for you. Then, in the browser:
-   1. turn on **Developer mode** (top right),
-   2. click **Load unpacked**,
-   3. press **Ctrl+V** in the folder box and choose **Select Folder**.
+2. **Press "Add to Chrome"** (or Edge, Brave) there. The browser opens a new tab and SDM
+   copies the extension's folder for you. Nothing is added yet: then, in the browser,
+   1. type `chrome://extensions` (Edge: `edge://extensions`, Brave: `brave://extensions`) in
+      the address bar and press Enter (browsers don't let other programs open this page),
+   2. turn on **Developer mode** (top right),
+   3. click **Load unpacked**,
+   4. press **Ctrl+V** in the folder box and choose **Select Folder**.
 3. **Firefox:** from Firefox Add-ons once SDM is listed there (Firefox only installs add-ons
    signed by Mozilla; Firefox 128 or newer).
 4. **Restart the browser** completely if it was already open.
@@ -52,6 +54,11 @@ SDM opens Add URL set to a video, at the quality you chose last time (720p, 1080
 audio). This uses SDM's video add-on (yt-dlp): if it's off, SDM asks once to turn it on. The
 extension only sends the page's address; it never reads the page.
 
+Use it on **the video's own page**. On a feed or a list of posts (Facebook's news feed, for
+example) the address is the feed's, and SDM finds no video there: open the video first (click
+its date or title), then try again. Stories, private posts and group videos need a login,
+which SDM doesn't use, so they can't be downloaded.
+
 ## Sending downloads to SDM
 
 This is on as soon as the extension is installed: it stops the browser's own copy of each new
@@ -59,8 +66,9 @@ download and SDM asks you to confirm it. To turn it off (or on again), click SDM
 icon (pin it from the puzzle-piece menu if you don't see it) and untick (or tick) **Send my
 downloads to SDM**; right-click still works while it's off.
 
-Private (incognito) windows, `blob:` downloads and files below the minimum size (set in the
-same panel) stay in the browser. If SDM can't take a download, the browser downloads it as
+Private (incognito) windows, `blob:` downloads, files below the minimum size (set in the
+same panel) and downloads from Telegram Web (`web.telegram.org`, whose files only exist inside
+its open tab) stay in the browser. If SDM can't take a download, the browser downloads it as
 usual, once.
 
 - **Chromium browsers** capture before their "Save As" window appears.
@@ -77,7 +85,7 @@ The toolbar icon shows a red **!**; click the icon to read the last problem.
 
 | Message | Meaning |
 |---|---|
-| SDM's browser bridge isn't installed for this extension | Run **Help > Setup assistant** in SDM, tick this browser, then restart the browser |
+| SDM isn't connected to this browser | Usually SDM was uninstalled or reinstalled, which removes the connection. Open SDM: since 1.2.1 it reconnects the browsers you chose when it starts. If not, run **Help > Setup assistant**, tick this browser and finish; if it still fails, quit the browser completely and open it again |
 | ...installed for a different extension ID | An extension loaded from an old copy: remove it and load the current zip |
 | SDM didn't start | SDM couldn't start within 15 seconds: start it from the Start menu and try again |
 | SDM couldn't take the link | Is SDM running as administrator? Start it normally. Details: `%LOCALAPPDATA%\SDM\logs\bridge-host.log` |

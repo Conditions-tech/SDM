@@ -17,7 +17,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from PySide6.QtCore import QCoreApplication, QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QCoreApplication, QFile, QObject, Qt, QTimer, Signal
 
 from sdm.core.categories import GENERAL, category_for
 from sdm.core.checksums import CHECKING, MISMATCH, MISSING, VERIFIED, normalize_sha256, sha256_of
@@ -139,6 +139,7 @@ class DownloadController(QObject):
         # Video pages (M12b) run in yt-dlp but report like the engine (VideoRunner).
         self._videos = VideoRunner(self)
         self._videos.event.connect(self._on_event, Qt.ConnectionType.QueuedConnection)
+        self._videos.stage.connect(self.model.set_stage, Qt.ConnectionType.QueuedConnection)
 
     # ----- lifecycle -----
 
@@ -268,7 +269,8 @@ class DownloadController(QObject):
     def _engine_settings(self) -> DownloadSettings:
         # The preference can only lower the number of connections the controller was given.
         connections = min(self._base_settings.max_connections, self.preferences.connections)
-        return replace(self._base_settings, max_connections=connections)
+        proxy = self.preferences.proxy or None  # M16: the user's HTTP proxy, if any
+        return replace(self._base_settings, max_connections=connections, proxy=proxy)
 
     def pause_all(self) -> int:
         """Pause every running and waiting download; returns how many."""
@@ -406,6 +408,8 @@ class DownloadController(QObject):
             command=command,
             ffmpeg=find_ffmpeg(self.preferences.ffmpeg_path),
             policy=self._policy_for(record),
+            login_browser=self.preferences.video_login_browser or None,
+            proxy=self.preferences.proxy or None,
         )
 
     def resume_all(self) -> int:
@@ -430,11 +434,15 @@ class DownloadController(QObject):
             self._delete_partial(record)
             self._move(download_id, self.store.mark_cancelled)
 
-    def remove(self, download_id: int) -> None:
-        """Remove an entry from the list. A finished file is kept; a partial file is deleted."""
+    def remove(self, download_id: int, *, delete_file: bool = False) -> None:
+        """Remove an entry from the list. A partial file is deleted; a finished file is kept,
+        or moved to the Recycle Bin with `delete_file` (only that exact file, never a folder)."""
         record = self.store.get(download_id)
         if record is not None and not record.state.is_active:
             self._delete_partial(record)
+            path = finished_file(record) if delete_file else None
+            if path is not None and path.is_file():
+                QFile.moveToTrash(str(path))
         self.store.remove(download_id)
         self.model.remove(download_id)
         self._emit_summary()

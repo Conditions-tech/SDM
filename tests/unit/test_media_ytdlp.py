@@ -3,6 +3,8 @@
 from pathlib import Path
 
 from sdm.media.ytdlp import (
+    LOGIN_TEXT,
+    NO_VIDEO_TEXT,
     PROGRESS_MARK,
     QUALITIES,
     VideoProgress,
@@ -60,10 +62,17 @@ def test_reading_progress_and_parts():
 
 
 def test_failures_in_plain_words():
-    assert explain_failure(["ERROR: Unsupported URL: https://x"]).startswith("yt-dlp doesn't")
+    # yt-dlp's own lines for a page with no video (a local page, 2026-10-28); the owner's
+    # Facebook feed and story failed this way, so the reason says what to do instead
+    no_video = [
+        "WARNING: [generic] Falling back on generic information extractor",
+        "ERROR: Unsupported URL: http://127.0.0.1:8765/",
+    ]
+    assert explain_failure(no_video) == NO_VIDEO_TEXT
+    assert "open the video on its own page" in NO_VIDEO_TEXT and "login" in NO_VIDEO_TEXT
     assert "lower one" in explain_failure(["ERROR: Requested format is not available."])
     assert "DRM" in explain_failure(["ERROR: [x] abc: This video is DRM protected"])
-    assert "login" in explain_failure(["ERROR: [y] abc: Sign in to confirm your age."])
+    assert explain_failure(["ERROR: [y] abc: Sign in to confirm your age."]) == LOGIN_TEXT
     assert "ffmpeg" in explain_failure(["ERROR: ffmpeg is not installed; can't merge"])
     # yt-dlp 2026.10.21's own words for a missing page (seen with SDM's local test server)
     missing = (
@@ -124,3 +133,10 @@ def test_finding_ytdlp(tmp_path):
     chosen = _exe(tmp_path / "tools/yt-dlp.exe")
     assert find_ytdlp(str(chosen), environ=empty) == chosen
     assert find_ytdlp(str(tmp_path / "nope.exe"), environ=empty) is None
+
+
+def test_the_users_proxy_reaches_ytdlp(tmp_path):
+    args = ytdlp_arguments(URL, QUALITIES["720p"], tmp_path, proxy="http://10.10.10.10:8080")
+    assert args[args.index("--proxy") + 1] == "http://10.10.10.10:8080"
+    assert args[-2:] == ["--", URL]
+    assert "--proxy" not in ytdlp_arguments(URL, QUALITIES["720p"], tmp_path)

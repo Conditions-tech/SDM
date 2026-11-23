@@ -21,6 +21,7 @@ export function reasonToSkip(item, { enabled = true, minMegabytes = 0, ownId } =
   if (item.incognito) return "incognito";
   if (item.state && item.state !== "in_progress") return "not in progress";
   if (webUrl(item.url) === null) return "not an http(s) address"; // blob:, data:, file:, ...
+  if (madeByThePage(item.url)) return "made inside the page";
   const size = knownSize(item);
   if (size !== null && size < minMegabytes * 1024 * 1024) return "smaller than the minimum";
   return null;
@@ -43,6 +44,20 @@ export function parseMinMegabytes(text) {
   if (!/^\d{1,6}$/.test(value)) return null;
   const number = Number(value);
   return number <= MAX_MIN_MEGABYTES ? number : null;
+}
+
+// Sites whose downloads only exist inside their open tab: the page fetches the file itself
+// (Telegram Web over its own protocol, for the signed-in user) and hands Chrome an address
+// its service worker answers. Asked directly, the server sends no file (web.telegram.org/k/d/…
+// redirects to the app's HTML page; the owner's report, 2026-10-28), so SDM could only fail.
+export const PAGE_MADE_HOSTS = ["web.telegram.org"];
+
+function madeByThePage(url) {
+  try {
+    return PAGE_MADE_HOSTS.includes(new URL(url).hostname);
+  } catch {
+    return false;
+  }
 }
 
 function knownSize(item) {

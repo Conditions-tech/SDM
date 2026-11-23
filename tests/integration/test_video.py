@@ -16,6 +16,7 @@ import pytest
 from sdm.core.downloads import DownloadRecord, DownloadState
 from sdm.engine.manager import Failed, Started
 from sdm.engine.policy import NetworkPolicy
+from sdm.media.ytdlp import NO_VIDEO_TEXT
 from sdm.ui.add_url_dialog import AddUrlDialog
 from sdm.ui.preferences import Preferences
 from sdm.ui.settings_dialog import SettingsDialog
@@ -86,7 +87,7 @@ def test_an_unsupported_page_fails_with_a_plain_reason(qtbot, videos, monkeypatc
     record = controller.add(PAGE, folder, video="720p")
     with qtbot.waitSignal(controller.download_failed, timeout=20000) as failed:
         pass
-    assert failed.args == [record.id, "yt-dlp doesn't know how to download from this page."]
+    assert failed.args == [record.id, NO_VIDEO_TEXT]
     assert state_of(controller, record.id) == DownloadState.FAILED
 
 
@@ -304,3 +305,24 @@ def test_add_url_offers_video_pages_only_when_turned_on(qtbot, tmp_path):
     on.kind_box.setCurrentIndex(on.kind_box.findData("2160p"))
     assert on.video == "2160p"
     assert not on.sha256_edit.isEnabled()
+
+
+def test_audio_that_couldnt_be_converted_is_not_called_done(qtbot, videos, monkeypatch):
+    # Regression (the owner's report, 2026-11-22): MP3 chosen, a .webm marked Completed.
+    controller, folder = videos
+    monkeypatch.setenv("FAKE_YTDLP_MODE", "no-ffmpeg")
+    record = controller.add(PAGE, folder, video="mp3")
+    wait_for(qtbot, controller, record.id, DownloadState.FAILED)
+    error = controller.store.get(record.id).error
+    assert "couldn't be turned into MP3" in error and "winget install Gyan.FFmpeg" in error
+    assert not any(p.suffix == ".webm" for p in folder.iterdir())  # nothing half-done in Downloads
+    assert (folder / f".sdm-video-{record.id}").exists()  # kept: Retry converts it
+
+
+def test_converting_to_mp3_is_shown(qtbot, videos):
+    controller, folder = videos
+    stages = []
+    controller._videos.stage.connect(lambda i, text: stages.append(text))
+    record = controller.add(PAGE, folder, video="mp3")
+    wait_for(qtbot, controller, record.id, DownloadState.COMPLETED)
+    assert any(text.startswith("Converting to MP3") for text in stages)

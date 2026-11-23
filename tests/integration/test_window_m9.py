@@ -118,9 +118,7 @@ def test_the_right_click_menu(window, controller, tmp_path):
     window.download_table.selectRow(0)
     texts = [a.text() for a in window.context_menu().actions() if not a.isSeparator()]
     assert texts[:4] == ["&Pause", "R&esume", "&Start now", "&Cancel download"]
-    assert {"Show in &folder", "Copy &address", "&Verify checksum…", "&Remove from list"} <= set(
-        texts
-    )
+    assert {"Show in &folder", "Copy &address", "&Verify checksum…", "&Remove..."} <= set(texts)
     assert "Open" not in " ".join(texts)  # SDM never opens (runs) a downloaded file
 
 

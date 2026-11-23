@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QSplitter,
     QSystemTrayIcon,
-    QTableView,
 )
 
 from sdm import __version__
@@ -42,7 +41,7 @@ from sdm.ui.settings_dialog import SettingsDialog, ask_video_terms
 from sdm.ui.setup_wizard import SetupWizard
 from sdm.ui.sidebar import DownloadFilter, Sidebar
 from sdm.ui.theme import apply_theme, colors_for
-from sdm.ui.widgets import DetailsPanel, ProgressDelegate
+from sdm.ui.widgets import DetailsPanel, DownloadTable, ProgressDelegate
 
 # Kept for existing imports: the columns of the download list, left to right.
 DOWNLOAD_COLUMNS = COLUMNS
@@ -98,10 +97,10 @@ class MainWindow(QMainWindow):
         # translated back to the model's rows with mapToSource.
         self.proxy = DownloadFilter(self)  # M13: chosen in the sidebar
         self.proxy.setSourceModel(controller.model)
-        self.download_table = QTableView(self)
+        self.download_table = DownloadTable(self)
         self.download_table.setModel(self.proxy)
         self.download_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.download_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.download_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.download_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.download_table.verticalHeader().setVisible(False)
         self.download_table.setAlternatingRowColors(True)
@@ -110,7 +109,11 @@ class MainWindow(QMainWindow):
         self.download_table.doubleClicked.connect(lambda index: self.show_in_folder_selected())
         header = self.download_table.horizontalHeader()
         header.setSectionResizeMode(NAME, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(STATUS, QHeaderView.ResizeMode.ResizeToContents)
+        # The owner's report (2026-11-22): the Status column was cut off at the right edge.
+        # A fixed, roomy width keeps "Converting to MP3…" and "Completed" readable.
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(STATUS, QHeaderView.ResizeMode.Interactive)
+        self.download_table.setColumnWidth(STATUS, 240)
         self.download_table.setColumnWidth(PROGRESS, 150)  # room for the bar and its %
         self.download_table.setItemDelegateForColumn(PROGRESS, ProgressDelegate(self))
         self.download_table.verticalHeader().setDefaultSectionSize(34)
@@ -146,10 +149,13 @@ class MainWindow(QMainWindow):
         self.resume_all_action.setToolTip("Resume every paused and interrupted download.")
         self.cancel_action = self._action("&Cancel download", self.cancel_selected)
         self.cancel_action.setToolTip("Stop for good and delete the partial file.")
-        self.remove_action = self._action("&Remove from list", self.remove_selected)
+        self.remove_action = self._action("&Remove...", self.remove_selected)
         self.remove_action.setToolTip(
-            "Remove the entry from the list. A finished file is kept; a partial file is deleted."
+            "Remove the selected downloads from the list; you choose whether finished files "
+            "stay on your PC or go to the Recycle Bin. Partial files are deleted."
         )
+        self.select_all_action = self._action("Select &all", self.download_table.selectAll)
+        self.select_all_action.setShortcut(QKeySequence.StandardKey.SelectAll)
         self.remove_action.setShortcut(QKeySequence.StandardKey.Delete)
         self.exit_action = self._action("E&xit", self.quit_app)
         self.show_in_folder_action = self._action("Show in &folder", self.show_in_folder_selected)
@@ -195,6 +201,7 @@ class MainWindow(QMainWindow):
             self.resume_all_action,
             self.pause_all_action,
             self.cancel_action,
+            self.select_all_action,
             self.remove_action,
         ):
             downloads_menu.addAction(action)
@@ -462,11 +469,17 @@ class MainWindow(QMainWindow):
         self.setup_wizard = None
         if result != QDialog.DialogCode.Accepted:
             # Asked once: Help > Setup assistant brings it back.
-            self.controller.set_preferences(replace(self.controller.preferences, setup_done=True))
+            preferences = replace(self.controller.preferences, setup_done=True)
+            if preferences.browsers == "?":
+                preferences = replace(preferences, browsers="")
+            self.controller.set_preferences(preferences)
             return []
-        self.apply_preferences(wizard.preferences())
-        self._default_folder = self._preferred_folder()
         chosen = wizard.chosen_browsers()
+        # Remembered so a reinstall can be repaired (reconnect_browsers), even if this fails.
+        self.apply_preferences(
+            replace(wizard.preferences(), browsers=",".join(browser.key for browser in chosen))
+        )
+        self._default_folder = self._preferred_folder()
         if not chosen:
             return []
         try:
@@ -477,10 +490,44 @@ class MainWindow(QMainWindow):
         self.status_label.setText(f"Connected to: {', '.join(names)}")
         return names
 
+    def reconnect_browsers(self) -> list[str]:
+        """At every start after the first: put back the browser registration that uninstalling
+        SDM removed (reinstalling doesn't restore it, and the extension then reports "host not
+        found"), or that points at a program that moved (1.2.1). Returns the names repaired."""
+        from sdm.bridge.browsers import BY_KEY
+        from sdm.bridge.install import (
+            InstallError,
+            broken_registrations,
+            register_browsers,
+            registered_browsers,
+        )
+
+        recorded = self.controller.preferences.browsers
+        if recorded == "?":  # an SDM before 1.2.1 didn't record the choice
+            chosen = registered_browsers()
+            if not chosen:  # nothing left to go by: ask once (finish_setup records the answer)
+                self.open_setup_wizard(browsers=True)
+                return []
+            browsers = ",".join(browser.key for browser in chosen)
+            self.controller.set_preferences(replace(self.controller.preferences, browsers=browsers))
+        else:
+            chosen = [BY_KEY[key] for key in recorded.split(",") if key in BY_KEY]
+        broken = broken_registrations(chosen)
+        if not broken:
+            return []
+        try:
+            names = register_browsers(broken)
+        except (InstallError, OSError) as exc:
+            self.status_label.setText(f"Couldn't reconnect your browsers: {exc}")
+            return []
+        self.status_label.setText(f"Reconnected to: {', '.join(names)}")
+        return names
+
     def remove_browsers(self) -> None:
         from sdm.bridge.install import uninstall, unregister_browsers
 
         removed = unregister_browsers() | uninstall()
+        self.controller.set_preferences(replace(self.controller.preferences, browsers=""))
         QMessageBox.information(
             self,
             "Browser integration",
@@ -679,6 +726,12 @@ class MainWindow(QMainWindow):
             return None
         return self.controller.model.record_at(self.proxy.mapToSource(rows[0]).row())
 
+    def selected_records(self) -> list[DownloadRecord]:
+        """Every selected download (Ctrl- or Shift-click, Ctrl+A), in the list's order."""
+        rows = sorted(self.download_table.selectionModel().selectedRows(), key=lambda i: i.row())
+        model = self.controller.model
+        return [model.record_at(self.proxy.mapToSource(index).row()) for index in rows]
+
     def selected_id(self) -> int | None:
         record = self.selected_record()
         return None if record is None else record.id
@@ -758,9 +811,32 @@ class MainWindow(QMainWindow):
             self.controller.cancel(download_id)
 
     def remove_selected(self) -> None:
-        download_id = self.selected_id()
-        if download_id is not None:
-            self.controller.remove(download_id)
+        records = [r for r in self.selected_records() if not r.state.is_active]
+        if not records:
+            return
+        with_files = sum(1 for r in records if finished_file(r) is not None)
+        choice = self.confirm_remove(len(records), with_files) if with_files else "list"
+        if choice is None:
+            return
+        for record in records:
+            self.controller.remove(record.id, delete_file=choice == "files")
+
+    def confirm_remove(self, count: int, with_files: int) -> str | None:
+        """ "list", "files" (to the Recycle Bin too) or None (cancelled)."""
+        box = QMessageBox(self)
+        box.setWindowTitle("Remove downloads")
+        what = "this download" if count == 1 else f"these {count} downloads"
+        box.setText(f"Remove {what} from SDM's list?")
+        box.setInformativeText(
+            f"{with_files} finished file(s) are on your PC. Keep them, or move them to the "
+            "Recycle Bin (you can restore them from there)."
+        )
+        keep = box.addButton("Remove from list", QMessageBox.ButtonRole.AcceptRole)
+        delete = box.addButton("Remove and delete files", QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton(QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(keep)
+        box.exec()
+        return {keep: "list", delete: "files"}.get(box.clickedButton())
 
     def _update_actions(self, *_args: object) -> None:
         record = self.selected_record()
@@ -776,7 +852,7 @@ class MainWindow(QMainWindow):
         self.start_now_action.setEnabled((waiting or resumable) and not record.forced)
         for action in self.move_actions.values():
             action.setEnabled(active)
-        self.remove_action.setEnabled(record is not None and not active)
+        self.remove_action.setEnabled(any(not r.state.is_active for r in self.selected_records()))
         finished = record is not None and finished_file(record) is not None
         self.show_in_folder_action.setEnabled(finished)
         self.verify_action.setEnabled(finished)

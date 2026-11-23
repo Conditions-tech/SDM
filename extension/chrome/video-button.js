@@ -28,8 +28,50 @@
     };
   }
 
+  // M15: on a feed (TikTok's For You, a profile, a board of pins) the page's address is a
+  // list, not one video, so yt-dlp finds nothing. The video's own post usually links from
+  // around the player: use the first link that looks like one post on the same site.
+  // Facebook (the owner's report, 2026-11-22): a home-feed video sent "facebook.com/", so its
+  // posts ("/posts/", "/permalink.php", "/story.php", "/share/v/") count as posts too.
+  const POST =
+    /\/(video|videos|reel|reels|p|pin|shorts|watch|status|story|posts|share\/[vr]|permalink\.php|story\.php)(\/|\?|$)/;
+
+  function looksLikePost(url) {
+    try {
+      const parsed = new URL(url);
+      return /^https?:$/.test(parsed.protocol) && POST.test(parsed.pathname + parsed.search);
+    } catch {
+      return false;
+    }
+  }
+
+  function postAddress(pageUrl, nearbyLinks) {
+    if (looksLikePost(pageUrl)) return pageUrl;
+    const site = new URL(pageUrl).hostname.split(".").slice(-2).join(".");
+    for (const link of nearbyLinks) {
+      if (!looksLikePost(link)) continue;
+      const host = new URL(link).hostname;
+      if (host === site || host.endsWith("." + site)) return link;
+    }
+    // A site's home page is a feed, never one video: say so instead of sending it to fail.
+    return new URL(pageUrl).pathname === "/" ? null : pageUrl;
+  }
+
+  function linksAround(element) {
+    const found = [];
+    let node = element;
+    for (let level = 0; node && level < 8 && found.length < 40; level++, node = node.parentElement) {
+      if (node.tagName === "A" && node.href) found.push(node.href);
+      for (const a of node.querySelectorAll?.("a[href]") ?? []) {
+        if (found.length >= 40) break;
+        found.push(a.href);
+      }
+    }
+    return found;
+  }
+
   if (globalThis.__SDM_TEST__) {
-    globalThis.__SDM_TEST__.videoButton = { bigEnough, buttonPlace };
+    globalThis.__SDM_TEST__.videoButton = { bigEnough, buttonPlace, postAddress };
     return;
   }
   if (globalThis.__sdmVideoButton) return; // injected twice (turned on with the page open)
@@ -123,9 +165,14 @@
   send.addEventListener("click", async (event) => {
     event.stopPropagation();
     if (!event.isTrusted) return; // only a real click by the user
+    const url = video ? postAddress(location.href, linksAround(video)) : location.href;
+    if (!url) {
+      text.textContent = "Open the video first (click its date or the video)";
+      return;
+    }
     text.textContent = "Sending…";
     try {
-      const reply = await chrome.runtime.sendMessage({ type: "sdm-video", url: location.href });
+      const reply = await chrome.runtime.sendMessage({ type: "sdm-video", url });
       text.textContent = reply?.ok ? "Sent to SDM" : "SDM: " + (reply?.text ?? "not reached");
     } catch {
       text.textContent = "Reload the page"; // the extension was updated or removed meanwhile

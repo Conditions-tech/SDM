@@ -149,3 +149,18 @@ def test_size_is_blank_when_the_server_never_answered():
     assert cell_text(failed, SIZE) == ""
     answered = rec(state=DownloadState.FAILED, file_name="a.zip", error="interrupted")
     assert cell_text(answered, SIZE) == "Unknown"
+
+
+def test_a_video_converting_says_so_instead_of_a_frozen_speed():
+    # Regression (the owner's report, 2026-11-22): converting a long recording to MP3 took
+    # minutes and the row kept its last speed, so it looked stuck.
+    model = DownloadTableModel()
+    model.set_records([rec(id=1, state=DownloadState.DOWNLOADING)])
+    model.set_live(1, 149 * MB, None, speed=32 * MB, time_left=0.0)
+    model.set_stage(1, "Converting to MP3…")
+    assert model.data(model.index(0, STATUS)) == "Converting to MP3…"
+    assert model.data(model.index(0, SPEED)) == "" and model.data(model.index(0, TIME_LEFT)) == ""
+    model.upsert(rec(id=1, state=DownloadState.COMPLETED))
+    assert model.data(model.index(0, STATUS)) == "Completed"
+    model.set_stage(1, "Converting to MP3…")  # too late: only a running download shows it
+    assert model.data(model.index(0, STATUS)) == "Completed"

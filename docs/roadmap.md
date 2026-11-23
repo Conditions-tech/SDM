@@ -504,6 +504,54 @@ install 1.2.0 (About 1.2.0, the new icon), add the extension with the assistant,
 video button and click it on a video page, a normal link opening SDM. This also covers the
 install checks left open in M11 and M12.
 
+**Fix after M13 (2026-10-27): the browser connection after a reinstall.** The owner's Chrome
+(and some users') logged "Specified native messaging host not found" after reinstalling SDM.
+Cause, found in the code: the uninstaller deletes the registry keys and host manifests
+(`packaging/sdm.iss`, by design so no browser points at a deleted program), but the welcome
+assistant, the only thing that registers, runs once and its flag lives in the kept settings.
+SDM now remembers the connected browsers and repairs their registration at every start;
+regression tests in `tests/unit/test_browsers.py` and `tests/unit/test_packaging.py`. The
+owner's own check (reinstall, open SDM, click a link in Chrome) is still to do.
+
+**Fix after M13 (2026-10-27): "Add to Chrome" opened a blank tab.** The owner pressed Add to
+Chrome in the welcome assistant and no extension appeared. The button starts the browser with
+`chrome://extensions` and copies the extension folder; starting Chrome and Edge that way with a
+throwaway profile showed they open `chrome://newtab/` / `edge://newtab/` instead (an ordinary
+web address opens fine), while the guide said "In the window that opened". The guide now
+starts with typing the address; regression tests in `tests/integration/test_extension_setup.py`.
+The owner's own check (follow the four steps in Chrome) is still to do.
+
+**Released as 1.2.1 on 2026-10-27** with both fixes above (tag `v1.2.1`; the release workflow
+builds and publishes the files). The owner's check as a user (uninstall, install 1.2.1 from
+GitHub, add the extension, a link reaching SDM, reinstall again) is still to do.
+
+**Fix after 1.2.1 (2026-10-28): Telegram Web downloads.** Two downloads from Telegram Web
+(`https://web.telegram.org/k/d/<number>`) went to SDM and failed. A direct request for such an
+address got a redirect to Telegram Web's HTML page, not a file: the page makes the file itself
+for the signed-in user. The extension's capture now leaves `web.telegram.org` to the browser
+(`PAGE_MADE_HOSTS` in `extension/chrome/capture.js`; regression test in `capture.test.js`).
+Not released yet.
+
+**Fix after 1.2.1 (2026-10-28): Facebook videos.** Two video-page downloads failed: the
+address of Facebook's news feed (`https://www.facebook.com/`, where the owner pressed the video
+button) and a story. yt-dlp 2026.10.21 handled both with its generic extractor, not its
+Facebook one; on a page with no video it ends with "Unsupported URL" (checked on a local page;
+Claude's sandbox couldn't reach facebook.com). Stories need a login, which SDM never uses
+(ADR-0020). SDM's reason now says to open the video on its own page and that stories and
+private posts need a login (`NO_VIDEO_TEXT`, `LOGIN_TEXT` in `sdm.media.ytdlp`); extension
+README updated. Not released yet.
+
+## 1.3.0: web media fixes (2026-11-22)
+
+The owner's reports: YouTube MP3 arriving as .webm, and Telegram, WhatsApp, Facebook,
+Instagram, Pinterest and TikTok downloads failing; and an Edge Add-ons listing. Done: images in
+the right-click menu; the video button sends a post's own address on feeds; an opt-in browser
+login for video pages (the owner's choice, 2026-11-22); a format check so an unconverted MP3 is
+never "Completed" (regression test); a Deno hint for YouTube; Telegram Web left to the browser;
+the Edge Add-ons kit (`docs/store/edge-addons.md`). Not possible: Telegram and WhatsApp Web
+files exist only inside their tab (`blob:`). Not tested against the real sites (tests use local
+servers only): the owner checks them in 1.3.0.
+
 ## M14: Android version (in progress)
 
 Asked for by the owner on 2026-10-26; plan approved the same day (ADR-0023). Owner's choices:

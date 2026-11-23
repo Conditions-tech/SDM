@@ -50,6 +50,12 @@ from sdm.media.ytdlp import (
 
 log = logging.getLogger(__name__)
 MAX_MESSAGE_LENGTH = 300
+AUDIO_EXTENSIONS = {"mp3": ".mp3", "m4a": ".m4a"}  # what an audio-only choice must end as
+NOT_CONVERTED_TEXT = (
+    "The audio arrived but couldn't be turned into {kind}: yt-dlp needs ffmpeg for that. "
+    "Install it for free with winget install Gyan.FFmpeg, restart SDM, then press Retry "
+    "(the audio isn't downloaded again)."
+)
 
 
 @dataclass
@@ -62,6 +68,8 @@ class _Job:
     progress: VideoProgress = field(default_factory=VideoProgress)
     rest: str = ""  # an unfinished output line
     stopping: str | None = None  # "pause" or "cancel" once the user asked
+    login_browser: str | None = None  # whose login yt-dlp may use (opt-in, M15)
+    proxy: str | None = None  # the user's HTTP proxy (M16)
 
 
 def remove_work_folder(work: Path, folder: Path) -> None:
@@ -80,10 +88,17 @@ def _display_name(part_name: str, quality_key: str) -> str:
     return stem + extension
 
 
+STAGE_TEXT = {
+    "converting": "Converting to {kind}… (long recordings take minutes)",
+    "merging": "Merging video and audio…",
+}
+
+
 class VideoRunner(QObject):
     # The engine's event types. Connect it queued, as the engine's events arrive: the
     # controller then never handles an event in the middle of starting a download.
     event = Signal(object)
+    stage = Signal(int, str)  # download id, what yt-dlp does after downloading
     _resolved = Signal(int, object)  # lookup thread -> main thread: addresses or an error
 
     def __init__(self, parent=None) -> None:
@@ -104,11 +119,14 @@ class VideoRunner(QObject):
         command: list[str],
         ffmpeg: Path | None,
         policy: NetworkPolicy,
+        login_browser: str | None = None,
+        proxy: str | None = None,
     ) -> None:
         """Start (or continue) a video download. `command` runs yt-dlp."""
         download_id = record.id
         work = work_folder(Path(record.folder), download_id)
-        self._jobs[download_id] = _Job(record, command, ffmpeg, work)
+        self._jobs[download_id] = _Job(record, command, ffmpeg, work,
+                                       login_browser=login_browser, proxy=proxy)  # fmt: skip
         self._deliver(Started(download_id))
         if record.video not in QUALITIES:
             self._fail(download_id, "This video download has no valid quality.")
@@ -172,7 +190,8 @@ class VideoRunner(QObject):
         process.setProgram(job.command[0])
         process.setArguments(
             [*job.command[1:],
-             *ytdlp_arguments(job.record.url, quality, job.work, ffmpeg=job.ffmpeg)]
+             *ytdlp_arguments(job.record.url, quality, job.work, ffmpeg=job.ffmpeg,
+                              login_browser=job.login_browser, proxy=job.proxy)]
         )  # fmt: skip
         process.readyReadStandardOutput.connect(lambda: self._read(download_id))
         process.finished.connect(lambda code, status: self._finished(download_id, code, status))
@@ -189,7 +208,11 @@ class VideoRunner(QObject):
         )
         *lines, job.rest = text.replace("\r", "\n").split("\n")
         for line in lines:
+            before = job.progress.stage
             kind = job.progress.line(line)
+            if job.progress.stage != before and job.progress.stage in STAGE_TEXT:
+                kind_name = (job.record.video or "").upper()
+                self.stage.emit(download_id, STAGE_TEXT[job.progress.stage].format(kind=kind_name))
             if kind == "part" and job.progress.part_name:
                 name = _display_name(job.progress.part_name, job.record.video or "")
                 self._deliver(FileInfo(download_id, name, None))
@@ -205,6 +228,13 @@ class VideoRunner(QObject):
             self._stopped(job)
             return
         media = finished_media(job.work)
+        wanted = AUDIO_EXTENSIONS.get(job.record.video or "")
+        if wanted and media is not None and media.suffix.lower() != wanted:
+            # The owner's report (2026-11-22): MP3 chosen, a .webm "completed". yt-dlp got the
+            # audio but couldn't convert it (no ffmpeg). Never call that done; the work folder
+            # stays, so Retry after installing ffmpeg converts it without downloading again.
+            self._fail(download_id, NOT_CONVERTED_TEXT.format(kind=wanted[1:].upper()))
+            return
         if status == QProcess.ExitStatus.NormalExit and exit_code == 0 and media is not None:
             folder = Path(job.record.folder)
             try:

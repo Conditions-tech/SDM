@@ -43,8 +43,9 @@ download manager.
 
 ## Install
 
-1. Download `SDM-Setup-<version>.exe` from the [latest release](../../releases/latest).
-2. Run it. Windows SmartScreen may say "Windows protected your PC", because SDM isn't
+1. Download `SDM-<version>.zip` from the [latest release](../../releases/latest), unzip it
+   and run `SDM-Setup-<version>.exe`.
+2. Windows SmartScreen may say "Windows protected your PC", because SDM isn't
    code-signed (signing costs money): click **More info**, then **Run anyway**.
 3. SDM installs for your Windows account only (no administrator rights) and appears in the
    Start menu. Uninstall it from Windows **Settings > Apps**; your history and downloads stay.
@@ -54,8 +55,8 @@ Requirements: Windows 10 or 11, 64-bit.
 ### Connect your browser
 
 The extension comes with SDM. In SDM's welcome assistant (or **Help > Add the browser
-extension**), press **Add to Chrome** (or Edge, Brave) and follow the three short steps
-shown there. Details, and the optional SDM button on videos:
+extension**), press **Add to Chrome** (or Edge, Brave) and follow the four short steps
+shown there; the first is typing `chrome://extensions` in the browser's address bar. Details, and the optional SDM button on videos:
 [extension/README.md](extension/README.md).
 
 Start SDM normally (from the Start menu). If it runs **as administrator**, Windows doesn't let
