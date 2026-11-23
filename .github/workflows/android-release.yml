@@ -45,8 +45,26 @@ jobs:
             echo "::error::The secret ANDROID_KEYSTORE_BASE64 is missing"
             exit 1
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/sdm-release.jks"
+          # A copy from the Windows clipboard can bring line breaks, spaces or an invisible
+          # byte-order mark: keep only the characters of base64 text (found in the first release).
+          clean=$(printf '%s' "$KEYSTORE_BASE64" | tr -cd 'A-Za-z0-9+/=')
+          echo "Key text: ${#KEYSTORE_BASE64} characters, ${#clean} after cleaning"
+          if ! printf '%s' "$clean" | base64 -d > "$RUNNER_TEMP/sdm-release.jks"; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64 text"
+            exit 1
+          fi
+          echo "Key file: $(stat -c %s "$RUNNER_TEMP/sdm-release.jks") bytes"
           echo "SDM_KEYSTORE=$RUNNER_TEMP/sdm-release.jks" >> "$GITHUB_ENV"
+      - name: Check the key opens with its password and alias
+        env:
+          SDM_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SDM_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if ! keytool -list -keystore "$SDM_KEYSTORE" -storepass "$SDM_KEYSTORE_PASSWORD" -alias "$SDM_KEY_ALIAS" > /dev/null; then
+            echo "::error::The key doesn't open with ANDROID_KEYSTORE_PASSWORD, or has no alias ANDROID_KEY_ALIAS"
+            exit 1
+          fi
+          echo "The key opens; alias found"
       - name: Test and build the release APK
         env:
           SDM_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
