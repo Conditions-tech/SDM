@@ -1,4 +1,4 @@
-# Every library is Apache-2.0 (ADR-0022). Change versions here only.
+# Every library is Apache-2.0 (ADR-0023). Change versions here only.
 [versions]
 agp = "9.4.1"
 kotlin = "2.2.10"

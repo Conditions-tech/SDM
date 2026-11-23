@@ -3,7 +3,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.chaquopy) // Python 3.13 inside the app, for yt-dlp and LAME (ADR-0023)
+    alias(libs.plugins.chaquopy) // Python 3.13 inside the app, for yt-dlp and LAME (ADR-0024)
 }
 
 android {
@@ -11,7 +11,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        // Permanent once released (ADR-0022).
+        // Permanent once released (ADR-0023).
         applicationId = "io.github.conditionstech.sdm"
         minSdk = 29 // Android 10: Download/SDM through MediaStore without a storage permission.
         targetSdk = 37
@@ -19,7 +19,7 @@ android {
         versionName = "0.1.0"
         // Tests that need a phone (the real media converter): gradlew connectedDebugAndroidTest
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // Chaquopy's Python 3.12+ exists for 64-bit phones only (ADR-0023).
+        // Chaquopy's Python 3.12+ exists for 64-bit phones only (ADR-0024).
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
@@ -48,7 +48,7 @@ kotlin {
 
 chaquopy {
     defaultConfig {
-        version = "3.13" // lameenc's Android wheels stop at Python 3.13 (ADR-0023)
+        version = "3.13" // lameenc's Android wheels stop at Python 3.13 (ADR-0024)
         // The PC needs the same Python to prepare the packages: SDM_BUILD_PYTHON points at it
         // (uv python install 3.13); otherwise Chaquopy looks for `py -3.13`.
         System.getenv("SDM_BUILD_PYTHON")?.let { buildPython(it) }

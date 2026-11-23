@@ -7,7 +7,7 @@ local.properties
 *.iml
 captures/
 
-# Signing keys never go into Git (ADR-0022): the release key is a GitHub secret.
+# Signing keys never go into Git (ADR-0023): the release key is a GitHub secret.
 *.jks
 *.keystore
 keystore.properties

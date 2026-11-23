@@ -1,4 +1,4 @@
-// SDM for Android (M14, ADR-0022). Two modules:
+// SDM for Android (M14, ADR-0023). Two modules:
 // - engine: plain Kotlin/JVM, no Android imports; its tests run on the PC.
 // - app: the Android app (Compose screens, service, notifications, history).
 pluginManagement {

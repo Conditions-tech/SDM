@@ -39,7 +39,7 @@ jobs:
       - run: node --test
         working-directory: extension
 
-  # The Android app (M14, ADR-0022): the engine's tests and a debug APK. Linux, because GitHub's
+  # The Android app (M14, ADR-0023): the engine's tests and a debug APK. Linux, because GitHub's
   # Linux runners come with the Android SDK.
   android:
     runs-on: ubuntu-latest
@@ -52,7 +52,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      # Chaquopy prepares the app's Python packages with the same Python version (ADR-0023).
+      # Chaquopy prepares the app's Python packages with the same Python version (ADR-0024).
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.13"

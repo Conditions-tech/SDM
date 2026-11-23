@@ -66,7 +66,7 @@ resolve the hex form (`test_disguised_spellings_of_this_computer_never_reach_it`
 - A server that sends no `Content-Length` and closes early is indistinguishable from a
   complete download (inherent to HTTP). Integrity checks (M9) can help when a checksum is known.
 
-## Android app (M14, ADR-0022)
+## Android app (M14, ADR-0023)
 
 The Android engine (`android/engine`) applies the same rules with its own code and tests:
 
@@ -93,7 +93,7 @@ The Android engine (`android/engine`) applies the same rules with its own code a
   the history is deleted only if it is SDM's own `.sdmpart` in that folder. Finished files go
   to Download/SDM through MediaStore, which never replaces a file. SDM never opens a download.
   Permissions: INTERNET, FOREGROUND_SERVICE(_DATA_SYNC), POST_NOTIFICATIONS (asked, optional).
-- Video pages (M15b, ADR-0023): yt-dlp only reads the page (no cookies, no downloads, silent);
+- Video pages (M15b, ADR-0024): yt-dlp only reads the page (no cookies, no downloads, silent);
   the page address is checked by the network policy first (`checkDestination`), and every
   stream is downloaded by SDM's engine, so media hosts are checked too. Request headers from
   the page pass an allow-list (never Cookie or Authorization; short printable values only).

@@ -27,7 +27,7 @@ class SdmApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Python (yt-dlp, LAME) starts once, with the app (ADR-0023).
+        // Python (yt-dlp, LAME) starts once, with the app (ADR-0024).
         if (!Python.isStarted()) Python.start(AndroidPlatform(this))
         Notifications.createChannels(this)
         preferences = Preferences(this)

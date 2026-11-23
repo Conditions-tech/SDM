@@ -13,5 +13,5 @@ It includes the following software, under these licences:
 | yt-dlp | Unlicense |
 | lameenc, LAME MP3 encoder | LGPL-2.0 (LAME is a separate shared library inside the app) |
 
-This file is published with every Android release (ADR-0023). The app's About screen shows
+This file is published with every Android release (ADR-0024). The app's About screen shows
 only the name and version, at the owner's request (2026-11-23).

@@ -1,4 +1,4 @@
-"""SDM's Python side on Android (ADR-0023): yt-dlp for video pages, LAME for MP3.
+"""SDM's Python side on Android (ADR-0024): yt-dlp for video pages, LAME for MP3.
 
 Kotlin calls these functions through Chaquopy. Nothing here touches the network by itself.
 """
@@ -40,7 +40,7 @@ class Mp3Encoder:
 
 
 # Only what SDM needs from yt-dlp: it reads a page and lists the streams; it never downloads,
-# never reads cookies or browser data, and writes nothing (ADR-0023). SDM's own engine then
+# never reads cookies or browser data, and writes nothing (ADR-0024). SDM's own engine then
 # downloads the chosen streams through its network policy.
 class _Silent:
     """yt-dlp's messages are not shown: failures come back as PageError instead."""

@@ -20,7 +20,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * The converter on the phone (ADR-0023), with Android's own media tools instead of ffmpeg:
+ * The converter on the phone (ADR-0024), with Android's own media tools instead of ffmpeg:
  * - MP4 and M4A copy the existing video and sound into a new MP4 container (MediaExtractor +
  *   MediaMuxer): fast and without quality loss, but only for formats MP4 can hold.
  * - MP3 decodes the sound with MediaCodec and encodes it with LAME (Python `sdm_media`).

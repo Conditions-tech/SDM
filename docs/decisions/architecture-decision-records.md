@@ -622,7 +622,7 @@ deleted. A changed decision gets a new record that supersedes the old one.
   shows its "developer mode extensions" notice for unpacked extensions. The security model
   records both.
 
-## ADR-0022: An Android version as a native Kotlin app
+## ADR-0023: An Android version as a native Kotlin app
 
 - **Date:** 2026-10-26 · **Status:** Accepted (M14 plan approved by the project owner)
 - **Context:** The owner asked for an installable Android version of SDM. The Windows app is
@@ -671,7 +671,7 @@ deleted. A changed decision gets a new record that supersedes the old one.
   never move a part's end while that part is writing. Writes go through one `FileChannel` at
   each part's offset; the file is pre-sized with `setLength` (sparse on ext4/f2fs).
 
-## ADR-0023: Media on Android: a built-in converter and yt-dlp, off by default
+## ADR-0024: Media on Android: a built-in converter and yt-dlp, off by default
 
 - **Date:** 2026-11-23 · **Status:** Accepted (M15 plan approved by the project owner)
 - **Context:** After M14e the owner asked for the phone app to work like the PC version,

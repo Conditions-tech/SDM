@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.ByteBuffer
 
-/** Video pages on the phone (ADR-0023): yt-dlp in Python, and Android's MediaMuxer to join streams. */
+/** Video pages on the phone (ADR-0024): yt-dlp in Python, and Android's MediaMuxer to join streams. */
 class AndroidVideoTools(private val converter: AndroidMediaConverter) : VideoTools {
     override suspend fun extract(pageUrl: String): String = withContext(Dispatchers.IO) {
         try {

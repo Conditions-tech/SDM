@@ -15,7 +15,7 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicLong
 
-/** What the converter can make (ADR-0023). */
+/** What the converter can make (ADR-0024). */
 enum class ConvertFormat(val extension: String, val label: String) {
     MP4("mp4", "MP4 video (no quality loss)"),
     M4A("m4a", "M4A audio (no quality loss)"),

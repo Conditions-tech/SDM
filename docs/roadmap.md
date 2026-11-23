@@ -506,11 +506,11 @@ install checks left open in M11 and M12.
 
 ## M14: Android version (in progress)
 
-Asked for by the owner on 2026-10-26; plan approved the same day (ADR-0022). Owner's choices:
+Asked for by the owner on 2026-10-26; plan approved the same day (ADR-0023). Owner's choices:
 native Kotlin with Jetpack Compose, Android 10 or newer, device checks on the owner's phone over
 USB, a signed APK on GitHub Releases (no Google Play). The project lives in `android/`.
 
-- M14a: ADR-0022; the `android/` Gradle project (`engine` Kotlin/JVM module, `app` Compose
+- M14a: ADR-0023; the `android/` Gradle project (`engine` Kotlin/JVM module, `app` Compose
   app) with the hexagon logo; a debug APK builds; tests run; a GitHub Actions job builds it.
   Checked on 2026-10-26: `gradlew :engine:test :app:assembleDebug` passed in 1 min 34 s on
   this PC (3 engine tests); the APK reports `io.github.conditionstech.sdm` 0.1.0, minSdk 29,
@@ -570,7 +570,7 @@ converter and yt-dlp, scheduler times and days, the speed limit.
 ## M15: Media on Android (done)
 
 Asked for by the owner on 2026-11-23 ("fully working like SDM PC"); plan approved the same day
-(ADR-0023). Owner's choices: yt-dlp built in but off by default with a terms notice; real MP3
+(ADR-0024). Owner's choices: yt-dlp built in but off by default with a terms notice; real MP3
 as well as M4A. The first Android release (M14f) comes after M15.
 
 - M15a: the converter: MP4 (rewrap) and M4A (audio) with Android's MediaExtractor/MediaMuxer,

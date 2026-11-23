@@ -50,7 +50,7 @@ class Downloads(
     private val lock = Any()
     private val jobs = HashMap<Long, Job>()
     private val pausing = HashSet<Long>()
-    private val videoProgress = HashMap<Long, VideoProgress>() // in memory only (ADR-0023)
+    private val videoProgress = HashMap<Long, VideoProgress>() // in memory only (ADR-0024)
     private val state = MutableStateFlow(loadHistory())
 
     /** The list, newest first. */

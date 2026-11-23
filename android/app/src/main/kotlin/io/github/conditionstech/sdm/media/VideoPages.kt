@@ -3,7 +3,7 @@ package io.github.conditionstech.sdm.media
 import org.json.JSONObject
 import java.io.File
 
-/** What to make from a video page (M15b, ADR-0023): the same choices as the PC's Download as. */
+/** What to make from a video page (M15b, ADR-0024): the same choices as the PC's Download as. */
 enum class VideoChoice(val label: String, val extension: String, val maxHeight: Int) {
     P720("720p", "mp4", 720),
     P1080("1080p", "mp4", 1080),

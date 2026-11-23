@@ -57,7 +57,7 @@ node scripts/chrome_bridge_check/video_button_check.mjs   # the video button in 
 uv run python scripts/promo/make_promo.py       # promo videos (dist\promo, ~5 min each; ffmpeg)
 uv run python scripts/promo/make_promo_audio.py VOICE.onnx 0   # voice + music (PIPER_PYTHON: see file)
 cd android; .\gradlew.bat :engine:test :app:assembleDebug   # Android (M14): tests + debug APK
-# Android app builds need Python 3.13 (Chaquopy, ADR-0023): uv python install 3.13, then
+# Android app builds need Python 3.13 (Chaquopy, ADR-0024): uv python install 3.13, then
 # $env:SDM_BUILD_PYTHON = (uv python find 3.13)
 ```
 
@@ -76,7 +76,7 @@ cd android; .\gradlew.bat :engine:test :app:assembleDebug   # Android (M14): tes
   engine events into Qt signals (ADR-0009). Only the main thread touches `DownloadStore`.
 - `src/sdm/media`: ffmpeg (and yt-dlp, M12b) command lines and progress parsing; no Qt.
   The UI runs them with QProcess (ADR-0020). Tests use fakes in `tests/fakes`.
-- `android/` (M14, ADR-0022): the Android app in Kotlin. `engine` is plain Kotlin/JVM (never
+- `android/` (M14, ADR-0023): the Android app in Kotlin. `engine` is plain Kotlin/JVM (never
   Android imports; tests on the PC with MockWebServer); `app` is the Compose app.
 - `src/sdm/cli.py`: `sdm-get`. `scripts/`: reproducible evaluations.
 - Never let a test open a real message box (it hangs the run); `no_blocking_dialogs` in
