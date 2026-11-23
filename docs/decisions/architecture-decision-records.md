@@ -670,3 +670,40 @@ deleted. A changed decision gets a new record that supersedes the old one.
   thread), so the parts map and every write are guarded by one lock; a dynamic split can
   never move a part's end while that part is writing. Writes go through one `FileChannel` at
   each part's offset; the file is pre-sized with `setLength` (sparse on ext4/f2fs).
+
+## ADR-0023: Media on Android: a built-in converter and yt-dlp, off by default
+
+- **Date:** 2026-11-23 · **Status:** Accepted (M15 plan approved by the project owner)
+- **Context:** After M14e the owner asked for the phone app to work like the PC version,
+  including video pages (yt-dlp) and conversion to MP3/MP4, before the first Android release.
+  On Windows the user installs yt-dlp and ffmpeg themselves (ADR-0020); a phone can't run
+  separately installed programs, so anything SDM uses must be inside the APK.
+- **Facts checked (2026-11-23):** Chaquopy (Python for Android) is MIT-licensed; 17.2.0
+  (2026-10-26) supports Android Gradle Plugin 7.3-9.5 and Python 3.10-3.15, 64-bit ABIs
+  (arm64-v8a, x86_64) for Python 3.12+. Its package index has `lameenc` (Python binding of the
+  LAME MP3 encoder, LGPL) for Python up to 3.13 only. ffmpeg-kit was archived and "officially
+  retired" in July 2026 (its source-only successor is not used). yt-dlp is pure Python
+  (Unlicense); no Chaquopy issue about it was found, so it counts as unproven until it runs on
+  the owner's phone.
+- **Decision (owner's choices: video pages built in but off by default; real MP3 as well):**
+  - **Converter (M15a):** MP4 (rewrap) and M4A (audio track) with Android's own
+    `MediaExtractor`/`MediaMuxer`, no re-encoding; MP3 by decoding with `MediaCodec` and
+    encoding with LAME through `lameenc` in Chaquopy's Python 3.13. Results go to Download/SDM
+    like downloads; SDM converts only files it downloaded, and never opens them.
+  - **Video pages (M15b):** yt-dlp shipped inside the app (Chaquopy), **off until the user
+    turns it on in Settings and accepts a notice** that they are responsible for each site's
+    terms. Choices 720p, 1080p, MP3, M4A. Formats are limited to what the phone can join
+    without ffmpeg (MP4/H.264 video + M4A/AAC audio), merged with `MediaMuxer`. No cookies,
+    logins, DRM or account extraction (ADR-0020's limits). Page addresses go through the same
+    URL check; yt-dlp's own network access can't use SDM's `PolicyDns`, so the page address
+    is checked against the network policy before yt-dlp is started (a known, recorded gap:
+    media hosts it then contacts are not checked).
+  - **Change to ADR-0020's rule:** on Android SDM *ships* yt-dlp instead of running a copy the
+    user installed. Updating yt-dlp means releasing a new SDM.
+  - **Sharing (M15c):** a shared video-page link asks "file or video?" and the quality.
+  - **Licences:** the app's About shows Python's, Chaquopy's, yt-dlp's and LAME's licences
+    (LGPL: LAME is a separate shared library, as ffmpeg is on Windows).
+- **Consequences:** the APK grows (estimated 30-40 MB; to be measured) and builds take longer;
+  only 64-bit phones are supported (Python 3.12+). The engine's tests stay on the PC; media
+  tests use small synthetic files and a fake yt-dlp, never real video sites. The release
+  (M14f) waits for M15.

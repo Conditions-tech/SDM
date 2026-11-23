@@ -19,7 +19,8 @@ and its tests have actually run and passed.
 | M11 | Open-source release on GitHub (Apache-2.0, UI/UX, more browsers) | Done (2026-10-25; owner's checks reported done with 1.2.0) |
 | M12 | Media: video/audio converter (ffmpeg) and optional yt-dlp add-on | Done (2026-10-26; owner's install check reported done with 1.2.0) |
 | M13 | SDM's own logo and look, a button over videos, the extension shipped with SDM | Done (2026-10-26) |
-| M14 | Android version: a native Kotlin app (APK) | In progress |
+| M14 | Android version: a native Kotlin app (APK) | In progress (release M14f after M15) |
+| M15 | Media on Android: converter (MP4, M4A, MP3) and video pages (yt-dlp, off by default) | In progress |
 
 ## M0: Environment inspection (done)
 
@@ -565,3 +566,17 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
 
 Left out of the first version: the native-messaging bridge, the Windows installer, the
 converter and yt-dlp, scheduler times and days, the speed limit.
+
+## M15: Media on Android (in progress)
+
+Asked for by the owner on 2026-11-23 ("fully working like SDM PC"); plan approved the same day
+(ADR-0023). Owner's choices: yt-dlp built in but off by default with a terms notice; real MP3
+as well as M4A. The first Android release (M14f) comes after M15.
+
+- M15a: the converter: MP4 (rewrap) and M4A (audio) with Android's MediaExtractor/MediaMuxer,
+  MP3 with MediaCodec + LAME (`lameenc` in Chaquopy, Python 3.13); progress, cancel, results in
+  Download/SDM; tests with synthetic media.
+- M15b: video pages with yt-dlp in Chaquopy: Settings switch + terms notice; 720p, 1080p, MP3,
+  M4A; MP4+M4A streams merged by MediaMuxer; pause/resume/cancel in the list; tests with a
+  fake yt-dlp and a local page; one real check on the owner's phone, with their OK.
+- M15c: sharing a video page asks "file or video?" and the quality.
