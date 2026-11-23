@@ -20,7 +20,7 @@ and its tests have actually run and passed.
 | M12 | Media: video/audio converter (ffmpeg) and optional yt-dlp add-on | Done (2026-10-26; owner's install check reported done with 1.2.0) |
 | M13 | SDM's own logo and look, a button over videos, the extension shipped with SDM | Done (2026-10-26) |
 | M14 | Android version: a native Kotlin app (APK) | In progress (release M14f after M15) |
-| M15 | Media on Android: converter (MP4, M4A, MP3) and video pages (yt-dlp, off by default) | In progress |
+| M15 | Media on Android: converter (MP4, M4A, MP3) and video pages (yt-dlp, off by default) | Done (2026-11-23; released with M14f) |
 
 ## M0: Environment inspection (done)
 
@@ -567,7 +567,7 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
 Left out of the first version: the native-messaging bridge, the Windows installer, the
 converter and yt-dlp, scheduler times and days, the speed limit.
 
-## M15: Media on Android (in progress)
+## M15: Media on Android (done)
 
 Asked for by the owner on 2026-11-23 ("fully working like SDM PC"); plan approved the same day
 (ADR-0023). Owner's choices: yt-dlp built in but off by default with a terms notice; real MP3
@@ -614,3 +614,7 @@ as well as M4A. The first Android release (M14f) comes after M15.
   video has); no crash. Note: `connectedDebugAndroidTest` uninstalls SDM afterwards, which
   wipes the phone's SDM history (files in Download/SDM stay).
 - M15c: sharing a video page asks "file or video?" and the quality.
+  Done on 2026-11-23: `SharedLinks.looksLikeVideoPage` (known video sites, or an address whose
+  last part has no file extension) preselects 720p in Add URL when video pages are on, and
+  otherwise says where to turn them on; the user can still choose. Checked: 34 app tests; on
+  the owner's phone a shared "Me at the zoo https://youtu.be/..." opened Add URL on 720p.

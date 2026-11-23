@@ -134,10 +134,20 @@ fun HomeScreen(
     var showSettings by remember { mutableStateOf(false) }
     var prefill by remember { mutableStateOf("") }
     var prefillError by remember { mutableStateOf<String?>(null) }
+    var prefillChoice by remember { mutableStateOf<VideoChoice?>(null) }
+    var prefillHint by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(shared) {
         if (shared != null) {
             prefill = shared.url.orEmpty()
             prefillError = if (shared.url == null) "The shared text has no http:// or https:// link." else null
+            // M15c: a shared video page starts on 720p, or says how to get videos.
+            val videoPage = shared.url != null && SharedLinks.looksLikeVideoPage(shared.url)
+            prefillChoice = if (videoPage && preferences.videoPagesEnabled) VideoChoice.P720 else null
+            prefillHint = if (videoPage && !preferences.videoPagesEnabled) {
+                "This looks like a video page. To save the video, turn on video pages in Settings."
+            } else {
+                null
+            }
             adding = true
             onSharedHandled()
         }
@@ -159,6 +169,8 @@ fun HomeScreen(
             ExtendedFloatingActionButton(onClick = {
                 prefill = ""
                 prefillError = null
+                prefillChoice = null
+                prefillHint = null
                 adding = true
             }) { Text("Add URL") }
         },
@@ -187,6 +199,8 @@ fun HomeScreen(
         AddUrlDialog(
             initialUrl = prefill,
             initialError = prefillError,
+            initialChoice = prefillChoice,
+            hint = prefillHint,
             videoPages = preferences.videoPagesEnabled,
             onDismiss = { adding = false },
             onAdd = { url, choice ->
@@ -223,6 +237,8 @@ private fun EmptyList(modifier: Modifier) {
 private fun AddUrlDialog(
     initialUrl: String,
     initialError: String?,
+    initialChoice: VideoChoice?,
+    hint: String?,
     videoPages: Boolean,
     onDismiss: () -> Unit,
     onAdd: (String, VideoChoice?) -> Unit,
@@ -232,7 +248,7 @@ private fun AddUrlDialog(
     // Android's "SDM accessed the clipboard" notice (seen on the owner's phone, Android 16).
     var url by remember { mutableStateOf(initialUrl) }
     var error by remember { mutableStateOf(initialError) }
-    var choice by remember { mutableStateOf<VideoChoice?>(null) } // null: the file itself
+    var choice by remember { mutableStateOf(initialChoice) } // null: the file itself
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add URL") },
@@ -257,6 +273,9 @@ private fun AddUrlDialog(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            hint?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (videoPages) {
                 // Download as (M15b): the file at this address, or a video page read by yt-dlp.
                 Text("Download as", style = MaterialTheme.typography.labelLarge)
