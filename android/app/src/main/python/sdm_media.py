@@ -11,7 +11,10 @@ def versions() -> dict:
     import lameenc  # loaded only when needed: PCs have no lameenc for Python 3.13
     import yt_dlp.version
 
-    return {"yt-dlp": yt_dlp.version.__version__, "lameenc": getattr(lameenc, "__version__", "1.7.0")}
+    return {
+        "yt-dlp": yt_dlp.version.__version__,
+        "lameenc": getattr(lameenc, "__version__", "1.7.0"),
+    }
 
 
 class Mp3Encoder:
