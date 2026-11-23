@@ -24,6 +24,7 @@ data class NowPlaying(
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val index: Int = 0,
     val queue: List<String> = emptyList(), // titles, in play order of the list
+    val mediaId: Long? = null, // the current song, for "Add to playlist"
 ) {
     val hasMedia: Boolean get() = queue.isNotEmpty()
 }
@@ -110,6 +111,7 @@ class MusicPlayer(private val context: Context) {
             shuffle = player.shuffleModeEnabled,
             repeatMode = player.repeatMode,
             index = player.currentMediaItemIndex,
+            mediaId = player.currentMediaItem?.mediaId?.toLongOrNull(),
             queue = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaMetadata.title?.toString().orEmpty() },
         )
     }

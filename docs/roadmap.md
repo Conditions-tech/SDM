@@ -729,8 +729,8 @@ whole phone's media after Android's permission. Steps (each to be approved befor
   permissions granted), the Music tab listed the phone's audio with durations and the Videos
   tab showed thumbnails, length, quality, size and folder (e.g. "Me at the zoo", 240p,
   Download/SDM). Note: Android marks WhatsApp audio as music, so it appears in Songs.
-- M17b: music player: queue, shuffle, repeat, background play, notification and lock-screen
-  controls (MediaSession), playlists.
+- M17b (done): music player: queue, shuffle, repeat, background play, notification and
+  lock-screen controls (MediaSession), playlists, sleep timer.
   Built on 2026-11-23 (owner asked to add a sleep timer with custom times): Media3 1.11.1
   (Apache-2.0) `PlaybackService` (MediaSessionService: background play, notification and
   lock-screen controls, audio focus, pause when headphones are unplugged); `MusicPlayer` (a
@@ -744,7 +744,12 @@ whole phone's media after Android's permission. Steps (each to be approved befor
   off/all/one, a 1-minute custom timer paused the music (still playing at 40 s, paused by
   70 s), and the media notification is public (lock screen). Lint 0 errors. Declined: a YouTube
   "music mode with an ad blocker" (it gets around YouTube Premium; refused even for private
-  use). Left for M17b: playlists.
+  use). Playlists (same day): `Playlists` (create, rename, delete, add without duplicates,
+  remove; names checked; songs deleted from the phone drop out; 5 PC tests) kept in
+  `playlists.db` (song IDs only, changes in one transaction); a Playlists view (Play all,
+  Rename, Delete, Remove), long-press a song or "+ Add to playlist" in Now Playing. Checked on
+  the owner's phone: a playlist created, a song added by long-press, Play all played it, and it
+  was still there after a force-stop. M17b done. Not done: reordering songs in a playlist.
 - M17c: video player: full screen, swipe for brightness/volume/seek, double-tap +/-10 s, speed,
   lock, resume position, .srt subtitles.
 - M17d: polish, tests (fakes on the PC, on-phone checks), release 1.1.0.

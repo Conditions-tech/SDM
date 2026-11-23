@@ -48,7 +48,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import io.github.conditionstech.sdm.R
+import io.github.conditionstech.sdm.library.AddToPlaylistDialog
 import io.github.conditionstech.sdm.library.MediaLibrary
+import io.github.conditionstech.sdm.library.Playlists
 import kotlinx.coroutines.delay
 
 /** The bar above the tabs while music is loaded (M17b): tap it for the full player. */
@@ -72,13 +74,14 @@ fun MiniPlayer(player: MusicPlayer, onOpen: () -> Unit) {
 
 /** The full player (M17b): seek bar, controls, shuffle, repeat, sleep timer and the queue. */
 @Composable
-fun NowPlayingScreen(player: MusicPlayer, timer: SleepTimer, onClose: () -> Unit) {
+fun NowPlayingScreen(player: MusicPlayer, timer: SleepTimer, playlists: Playlists, onClose: () -> Unit) {
     val now by player.nowPlaying.collectAsState()
     val sleep by timer.state.collectAsState()
     var position by remember { mutableLongStateOf(0L) }
     var dragging by remember { mutableStateOf<Float?>(null) }
     var timerLeft by remember { mutableStateOf<Long?>(null) }
     var showTimer by remember { mutableStateOf(false) }
+    var addToPlaylist by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         while (true) { // the seek bar and the countdown move a few times a second
             position = player.positionMs()
@@ -100,6 +103,7 @@ fun NowPlayingScreen(player: MusicPlayer, timer: SleepTimer, onClose: () -> Unit
             Spacer(Modifier.height(24.dp))
             Text(now.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(now.artist, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            now.mediaId?.let { TextButton(onClick = { addToPlaylist = true }) { Text("+ Add to playlist") } }
             Spacer(Modifier.height(24.dp))
             val duration = now.durationMs.coerceAtLeast(1)
             Slider(
@@ -149,6 +153,7 @@ fun NowPlayingScreen(player: MusicPlayer, timer: SleepTimer, onClose: () -> Unit
         }
     }
     if (showTimer) SleepTimerDialog(timer, sleep) { showTimer = false }
+    if (addToPlaylist) now.mediaId?.let { AddToPlaylistDialog(playlists, listOf(it)) { addToPlaylist = false } }
 }
 
 @Composable

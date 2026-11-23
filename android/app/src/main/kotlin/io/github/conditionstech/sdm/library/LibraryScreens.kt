@@ -7,7 +7,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,15 +53,26 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** How the Music tab is browsed. */
-private enum class MusicView(val label: String) { SONGS("Songs"), ALBUMS("Albums"), ARTISTS("Artists"), FOLDERS("Folders") }
+private enum class MusicView(val label: String) {
+    SONGS("Songs"), PLAYLISTS("Playlists"), ALBUMS("Albums"), ARTISTS("Artists"), FOLDERS("Folders")
+}
 
 /**
  * The Music tab (M17a): every song SDM can see, as songs, albums, artists or folders, with
  * search and sorting. Playing comes in M17b; [onPlay] receives the list and the chosen song.
  */
 @Composable
-fun MusicScreen(library: MediaStoreLibrary, modifier: Modifier = Modifier, onPlay: (List<MediaEntry>, MediaEntry) -> Unit) {
+fun MusicScreen(
+    library: MediaStoreLibrary,
+    playlists: Playlists,
+    modifier: Modifier = Modifier,
+    onPlay: (List<MediaEntry>, MediaEntry) -> Unit,
+) {
     val all by library.songs.collectAsState()
+    val lists by playlists.all.collectAsState()
+    var openPlaylist by remember { mutableStateOf<Long?>(null) }
+    var adding by remember { mutableStateOf<List<Long>?>(null) } // songs to add to a playlist
+    adding?.let { AddToPlaylistDialog(playlists, it) { adding = null } }
     var view by remember { mutableStateOf(MusicView.SONGS) }
     var query by remember { mutableStateOf("") }
     var order by remember { mutableStateOf(SortOrder.TITLE) }
@@ -75,7 +89,12 @@ fun MusicScreen(library: MediaStoreLibrary, modifier: Modifier = Modifier, onPla
                 Text(group.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             val entries = MediaLibrary.search(group.entries, query)
-            SongList(entries) { onPlay(entries, it) }
+            SongList(entries, onLongPress = { adding = listOf(it.id) }) { onPlay(entries, it) }
+            return@Column
+        }
+        val playlist = openPlaylist?.let { id -> lists.firstOrNull { it.id == id } }
+        if (playlist != null) {
+            PlaylistDetail(playlist, playlists, playlists.songs(playlist, all), onBack = { openPlaylist = null }, onPlay = onPlay)
             return@Column
         }
         ChipRow(MusicView.entries.map { it.label }, view.label) { label -> view = MusicView.entries.first { it.label == label } }
@@ -84,8 +103,9 @@ fun MusicScreen(library: MediaStoreLibrary, modifier: Modifier = Modifier, onPla
                 ChipRow(SortOrder.entries.map { it.label }, order.label) { label -> order = SortOrder.entries.first { it.label == label } }
                 val sorted = MediaLibrary.sorted(found, order)
                 if (sorted.isEmpty()) Empty(if (all.isEmpty()) "No songs found yet." else "Nothing matches “$query”.")
-                SongList(sorted) { onPlay(sorted, it) }
+                SongList(sorted, onLongPress = { adding = listOf(it.id) }) { onPlay(sorted, it) }
             }
+            MusicView.PLAYLISTS -> PlaylistList(lists, playlists) { openPlaylist = it.id }
             MusicView.ALBUMS -> GroupList(MediaLibrary.albums(found)) { openGroup = it }
             MusicView.ARTISTS -> GroupList(MediaLibrary.artists(found)) { openGroup = it }
             MusicView.FOLDERS -> GroupList(MediaLibrary.folders(found)) { openGroup = it }
@@ -178,12 +198,20 @@ private fun ChipRow(labels: List<String>, selected: String, onSelect: (String) -
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SongList(songs: List<MediaEntry>, onClick: (MediaEntry) -> Unit) {
+private fun SongList(
+    songs: List<MediaEntry>,
+    onLongPress: ((MediaEntry) -> Unit)? = null,
+    trailing: (@Composable (MediaEntry) -> Unit)? = null,
+    onClick: (MediaEntry) -> Unit,
+) {
     LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
         items(songs, key = { it.id }) { song ->
             Row(
-                Modifier.fillMaxWidth().clickable { onClick(song) }.padding(horizontal = 16.dp, vertical = 10.dp),
+                Modifier.fillMaxWidth()
+                    .combinedClickable(onClick = { onClick(song) }, onLongClick = onLongPress?.let { { it(song) } })
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
@@ -197,6 +225,7 @@ private fun SongList(songs: List<MediaEntry>, onClick: (MediaEntry) -> Unit) {
                     )
                 }
                 Text(MediaLibrary.formatDuration(song.durationMs), style = MaterialTheme.typography.bodySmall)
+                trailing?.invoke(song)
             }
         }
     }
@@ -251,4 +280,126 @@ private fun Thumbnail(video: MediaEntry) {
             )
         }
     }
+}
+
+/** The Playlists view: a "New playlist" button and every playlist with its song count. */
+@Composable
+private fun PlaylistList(lists: List<Playlist>, playlists: Playlists, onOpen: (Playlist) -> Unit) {
+    var naming by remember { mutableStateOf(false) }
+    if (naming) NameDialog("New playlist", "", { playlists.create(it) }) { naming = false }
+    LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
+        item {
+            TextButton(onClick = { naming = true }, modifier = Modifier.padding(horizontal = 8.dp)) { Text("+ New playlist") }
+        }
+        if (lists.isEmpty()) item { Empty("No playlists yet. Create one, then long-press a song to add it.") }
+        items(lists, key = { it.id }) { playlist ->
+            Column(Modifier.fillMaxWidth().clickable { onOpen(playlist) }.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Text(playlist.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val count = playlist.songIds.size
+                Text("$count song${if (count == 1) "" else "s"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+/** One playlist: play it, rename or delete it, and remove songs. */
+@Composable
+private fun PlaylistDetail(
+    playlist: Playlist,
+    playlists: Playlists,
+    songs: List<MediaEntry>,
+    onBack: () -> Unit,
+    onPlay: (List<MediaEntry>, MediaEntry) -> Unit,
+) {
+    var renaming by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
+    if (renaming) NameDialog("Rename playlist", playlist.name, { playlists.rename(playlist.id, it) }) { renaming = false }
+    if (deleting) {
+        AlertDialog(
+            onDismissRequest = { deleting = false },
+            title = { Text("Delete “${playlist.name}”?") },
+            text = { Text("Only the playlist is deleted; the songs stay on your phone.") },
+            confirmButton = { TextButton(onClick = { playlists.delete(playlist.id); deleting = false; onBack() }) { Text("Delete") } },
+            dismissButton = { TextButton(onClick = { deleting = false }) { Text("Cancel") } },
+        )
+    }
+    Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = onBack) { Text("‹ Playlists") }
+        Text(playlist.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+    }
+    Row(Modifier.padding(horizontal = 8.dp)) {
+        TextButton(onClick = { songs.firstOrNull()?.let { onPlay(songs, it) } }, enabled = songs.isNotEmpty()) { Text("Play all") }
+        TextButton(onClick = { renaming = true }) { Text("Rename") }
+        TextButton(onClick = { deleting = true }) { Text("Delete") }
+    }
+    if (songs.isEmpty()) Empty("This playlist is empty. Long-press a song in Songs to add it.")
+    SongList(
+        songs,
+        trailing = { song -> TextButton(onClick = { playlists.remove(playlist.id, song.id) }) { Text("Remove") } },
+    ) { onPlay(songs, it) }
+}
+
+/** Chooses a playlist for [songIds], or makes a new one for them. Also used by Now Playing. */
+@Composable
+fun AddToPlaylistDialog(playlists: Playlists, songIds: List<Long>, onDone: () -> Unit) {
+    val lists by playlists.all.collectAsState()
+    var naming by remember { mutableStateOf(false) }
+    if (naming) {
+        NameDialog("New playlist", "", { playlists.add(playlists.create(it), songIds) }) {
+            naming = false
+            onDone()
+        }
+        return
+    }
+    AlertDialog(
+        onDismissRequest = onDone,
+        title = { Text("Add to playlist") },
+        text = {
+            LazyColumn {
+                items(lists, key = { it.id }) { playlist ->
+                    TextButton(onClick = { playlists.add(playlist.id, songIds); onDone() }, modifier = Modifier.fillMaxWidth()) {
+                        Text(playlist.name, modifier = Modifier.fillMaxWidth(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                item {
+                    TextButton(onClick = { naming = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("+ New playlist", modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDone) { Text("Close") } },
+    )
+}
+
+/** Asks for a playlist name; [save] throws PlaylistException with a message to show. */
+@Composable
+private fun NameDialog(title: String, initial: String, save: (String) -> Unit, onDone: () -> Unit) {
+    var name by remember { mutableStateOf(initial) }
+    var error by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = onDone,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it; error = null },
+                label = { Text("Name") },
+                isError = error != null,
+                supportingText = { error?.let { Text(it) } },
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                try {
+                    save(name)
+                    onDone()
+                } catch (e: PlaylistException) {
+                    error = e.message
+                }
+            }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDone) { Text("Cancel") } },
+    )
 }

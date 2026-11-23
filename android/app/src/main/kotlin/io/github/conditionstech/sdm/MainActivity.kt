@@ -98,7 +98,7 @@ fun SdmTabs(app: SdmApplication, shared: SharedLink?, onSharedHandled: () -> Uni
     LaunchedEffect(Unit) { app.musicPlayer.reconnect() } // music may still be playing
     if (showPlayer) {
         BackHandler { showPlayer = false }
-        NowPlayingScreen(app.musicPlayer, app.sleepTimer) { showPlayer = false }
+        NowPlayingScreen(app.musicPlayer, app.sleepTimer, app.playlists) { showPlayer = false }
         return
     }
     fun comingNext() = scope.launch { snackbar.showSnackbar("The video player comes in the next step (M17c).") }
@@ -128,7 +128,7 @@ fun SdmTabs(app: SdmApplication, shared: SharedLink?, onSharedHandled: () -> Uni
         Box(Modifier.padding(padding)) {
             when (tab) {
                 0 -> HomeScreen(app.downloads, app.conversions, app.preferences, shared, onSharedHandled)
-                1 -> TabPage("Music") { MusicScreen(app.library) { songs, song -> app.musicPlayer.play(songs, song) } }
+                1 -> TabPage("Music") { MusicScreen(app.library, app.playlists) { songs, song -> app.musicPlayer.play(songs, song) } }
                 else -> TabPage("Videos") { VideosScreen(app.library) { comingNext() } }
             }
         }
