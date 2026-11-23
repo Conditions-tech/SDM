@@ -8,6 +8,7 @@ import io.github.conditionstech.sdm.downloads.MediaStorePublisher
 import io.github.conditionstech.sdm.downloads.SqliteHistory
 import io.github.conditionstech.sdm.engine.DownloadSettings
 import io.github.conditionstech.sdm.engine.HttpDownloader
+import io.github.conditionstech.sdm.library.MediaStoreLibrary
 import io.github.conditionstech.sdm.media.AndroidMediaConverter
 import io.github.conditionstech.sdm.media.AndroidVideoTools
 import io.github.conditionstech.sdm.media.Conversions
@@ -24,6 +25,8 @@ class SdmApplication : Application() {
         private set
     lateinit var preferences: Preferences
         private set
+    lateinit var library: MediaStoreLibrary
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -31,6 +34,7 @@ class SdmApplication : Application() {
         if (!Python.isStarted()) Python.start(AndroidPlatform(this))
         Notifications.createChannels(this)
         preferences = Preferences(this)
+        library = MediaStoreLibrary(this, CoroutineScope(SupervisorJob() + Dispatchers.Default))
         val mediaConverter = AndroidMediaConverter(this)
         // Partial files live in the app's own storage; finished files are copied to Download/SDM.
         val work = File(getExternalFilesDir(null) ?: filesDir, "partial").apply { mkdirs() }

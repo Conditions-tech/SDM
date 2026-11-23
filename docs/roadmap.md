@@ -718,6 +718,14 @@ whole phone's media after Android's permission. Steps (each to be approved befor
 
 - M17a: Media3 checked and added; the media library (MediaStore query, permission asked when a
   player opens); Music and Videos tabs.
+  Built on 2026-11-23 (branch `m17/android-players`): Downloads / Music / Videos tabs with our
+  own icons; `MediaLibrary` (sorting by title/newest/longest/largest, albums, artists, folders,
+  accent-insensitive search, durations; 5 PC tests) and `MediaStoreLibrary` (MediaStore query,
+  live refresh, READ_MEDIA_AUDIO/VIDEO asked from an "Allow access" card, never at install;
+  without it Android shows SDM only its own files). Video thumbnails come from Android. Media3
+  moves to M17b, where playback starts. Checked: app tests, lint 0 errors, and on the owner's
+  phone (test build, which replaced 1.0.0 with the owner's OK) both tabs open with the access
+  card, search, views and sorting; no crash. Not yet seen: the lists with real media.
 - M17b: music player: queue, shuffle, repeat, background play, notification and lock-screen
   controls (MediaSession), playlists.
 - M17c: video player: full screen, swipe for brightness/volume/seek, double-tap +/-10 s, speed,

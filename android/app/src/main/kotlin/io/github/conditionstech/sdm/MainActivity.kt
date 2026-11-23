@@ -13,6 +13,21 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import io.github.conditionstech.sdm.library.MusicScreen
+import io.github.conditionstech.sdm.library.VideosScreen
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -69,6 +84,52 @@ import io.github.conditionstech.sdm.media.VideoChoice
 import io.github.conditionstech.sdm.engine.SdmException
 import io.github.conditionstech.sdm.engine.Units
 
+/** The three tabs (M17a): Downloads, Music, Videos. A shared link always opens Downloads. */
+@Composable
+fun SdmTabs(app: SdmApplication, shared: SharedLink?, onSharedHandled: () -> Unit) {
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    LaunchedEffect(shared) { if (shared != null) tab = 0 }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    fun comingNext() = scope.launch { snackbar.showSnackbar("Playing comes in the next step (M17b, M17c).") }
+    Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        snackbarHost = { SnackbarHost(snackbar) },
+        bottomBar = {
+            NavigationBar {
+                listOf(
+                    Triple("Downloads", R.drawable.ic_tab_downloads, 0),
+                    Triple("Music", R.drawable.ic_tab_music, 1),
+                    Triple("Videos", R.drawable.ic_tab_video, 2),
+                ).forEach { (label, icon, index) ->
+                    NavigationBarItem(
+                        selected = tab == index,
+                        onClick = { tab = index },
+                        icon = { Icon(painterResource(icon), contentDescription = null) },
+                        label = { Text(label) },
+                    )
+                }
+            }
+        },
+    ) { padding ->
+        Box(Modifier.padding(padding)) {
+            when (tab) {
+                0 -> HomeScreen(app.downloads, app.conversions, app.preferences, shared, onSharedHandled)
+                1 -> TabPage("Music") { MusicScreen(app.library) { _, _ -> comingNext() } }
+                else -> TabPage("Videos") { VideosScreen(app.library) { comingNext() } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabPage(title: String, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
+        Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp))
+        content()
+    }
+}
+
 /** The download list and Add URL (M14d). */
 class MainActivity : ComponentActivity() {
     /** A link another app shared (Share → SDM), waiting for the user to confirm it. */
@@ -80,7 +141,7 @@ class MainActivity : ComponentActivity() {
         val app = application as SdmApplication
         if (savedInstanceState == null) takeShared(intent)
         setContent {
-            SdmTheme { HomeScreen(app.downloads, app.conversions, app.preferences, shared, onSharedHandled = { shared = null }) }
+            SdmTheme { SdmTabs(app, shared, onSharedHandled = { shared = null }) }
         }
     }
 
@@ -153,6 +214,7 @@ fun HomeScreen(
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     Scaffold(
+        contentWindowInsets = WindowInsets.statusBars,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
