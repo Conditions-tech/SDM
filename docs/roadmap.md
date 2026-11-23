@@ -618,3 +618,9 @@ as well as M4A. The first Android release (M14f) comes after M15.
   last part has no file extension) preselects 720p in Add URL when video pages are on, and
   otherwise says where to turn them on; the user can still choose. Checked: 34 app tests; on
   the owner's phone a shared "Me at the zoo https://youtu.be/..." opened Add URL on 720p.
+
+Found before the first push (2026-11-23): the root `.gitignore` rule `downloads/` (SDM's
+runtime folders) had hidden the app's `downloads` source package, so M14d-M15c's list,
+history, MediaStore saving, Share and their tests were never committed; `android/.gitignore`
+now un-ignores `app/src/**/downloads/`. A fresh clone of the branch then built and passed all
+106 tests (72 engine, 34 app). From now on, release checks build from a fresh clone.
