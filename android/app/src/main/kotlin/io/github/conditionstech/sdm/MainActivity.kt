@@ -2,6 +2,7 @@ package io.github.conditionstech.sdm
 
 import android.Manifest
 import android.os.Build
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -37,6 +38,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,18 +56,40 @@ import androidx.compose.ui.unit.dp
 import io.github.conditionstech.sdm.downloads.DownloadItem
 import io.github.conditionstech.sdm.downloads.DownloadState
 import io.github.conditionstech.sdm.downloads.Downloads
+import io.github.conditionstech.sdm.downloads.SharedLinks
 import io.github.conditionstech.sdm.engine.SdmException
 import io.github.conditionstech.sdm.engine.Units
 
 /** The download list and Add URL (M14d). */
 class MainActivity : ComponentActivity() {
+    /** A link another app shared (Share → SDM), waiting for the user to confirm it. */
+    private var shared by mutableStateOf<SharedLink?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val downloads = (application as SdmApplication).downloads
-        setContent { SdmTheme { HomeScreen(downloads) } }
+        if (savedInstanceState == null) takeShared(intent)
+        setContent {
+            SdmTheme { HomeScreen(downloads, shared, onSharedHandled = { shared = null }) }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        takeShared(intent)
+    }
+
+    private fun takeShared(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND) return
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+        // A share with no usable link still opens the dialog, saying why.
+        shared = SharedLink(SharedLinks.firstLink(text))
     }
 }
+
+/** [url] is null when the shared text had no address SDM can download. */
+class SharedLink(val url: String?)
 
 // The logo's indigo and sky blue (ADR-0021).
 private val Indigo = Color(0xFF4F46E5)
@@ -83,16 +107,30 @@ fun SdmTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(downloads: Downloads) {
+fun HomeScreen(downloads: Downloads, shared: SharedLink? = null, onSharedHandled: () -> Unit = {}) {
     val items by downloads.items.collectAsState()
     var adding by remember { mutableStateOf(false) }
+    var prefill by remember { mutableStateOf("") }
+    var prefillError by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(shared) {
+        if (shared != null) {
+            prefill = shared.url.orEmpty()
+            prefillError = if (shared.url == null) "The shared text has no http:// or https:// link." else null
+            adding = true
+            onSharedHandled()
+        }
+    }
     // Android 13+ asks before an app may show notifications; downloads work either way.
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { adding = true }) { Text("Add URL") }
+            ExtendedFloatingActionButton(onClick = {
+                prefill = ""
+                prefillError = null
+                adding = true
+            }) { Text("Add URL") }
         },
     ) { padding ->
         if (items.isEmpty()) {
@@ -108,6 +146,8 @@ fun HomeScreen(downloads: Downloads) {
     }
     if (adding) {
         AddUrlDialog(
+            initialUrl = prefill,
+            initialError = prefillError,
             onDismiss = { adding = false },
             onAdd = { url ->
                 downloads.add(url) // throws for a bad address: the dialog shows why
@@ -140,12 +180,12 @@ private fun EmptyList(modifier: Modifier) {
 }
 
 @Composable
-private fun AddUrlDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
+private fun AddUrlDialog(initialUrl: String, initialError: String?, onDismiss: () -> Unit, onAdd: (String) -> Unit) {
     val clipboard = LocalClipboardManager.current
     // The clipboard is read only when the user taps Paste: reading it by itself would show
     // Android's "SDM accessed the clipboard" notice (seen on the owner's phone, Android 16).
-    var url by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var url by remember { mutableStateOf(initialUrl) }
+    var error by remember { mutableStateOf(initialError) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add URL") },

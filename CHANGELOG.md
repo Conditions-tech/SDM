@@ -17,6 +17,8 @@ while SDM is in 0.x.
 - M14d: the Android app's download list: Add URL, pause, resume, cancel, remove, a progress
   notification while downloads run in the background, the history, and finished files in
   Download/SDM.
+- M14e: "Download with SDM" in Android's share menu opens Add URL with the shared link; at
+  most 3 downloads run at once and the rest wait their turn.
 - M13 marked done: the owner reported the 1.2.0 checks done (install, the new icon, adding
   the extension with the assistant, the button over videos, a normal link opening SDM). This
   also closes the install checks left open in M11 and M12 (roadmap).

@@ -550,6 +550,13 @@ USB, a signed APK on GitHub Releases (no Google Play). The project lives in `and
   clipboard by itself, so Android showed "SDM accessed the clipboard"; it now reads it only on
   a Paste button. Not observed: the notifications' content (only that SDM's icon appeared).
 - M14e: Share → SDM (Android's share menu) and the queue limit.
+  Built on 2026-11-23: "Download with SDM" in Android's share menu (`ACTION_SEND`,
+  `text/plain`): `SharedLinks` takes the first http(s) address that passes the URL check from
+  the shared text (at most 16 KiB scanned) and opens Add URL filled in; the user still confirms.
+  The queue: at most 3 downloads run, the rest wait ("Waiting") and start oldest first when a
+  slot frees (`pump()`, as ADR-0013 on Windows). Checked: 16 app tests (queue order and slot
+  hand-over, cancelling a waiting entry, link extraction including hostile text), lint 0
+  errors, the share target registered on the owner's phone (package query).
 - M14f: a signed release APK from GitHub Actions, the owner's check on their phone, the
   release notes and social post drafts.
 

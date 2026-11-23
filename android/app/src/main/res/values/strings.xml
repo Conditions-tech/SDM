@@ -3,4 +3,5 @@
     <string name="app_name">SDM</string>
     <string name="app_full_name">Smart Download Manager</string>
     <string name="empty_list">Your downloads will appear here.</string>
+    <string name="share_label">Download with SDM</string>
 </resources>
