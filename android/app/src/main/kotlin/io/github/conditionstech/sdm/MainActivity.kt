@@ -60,6 +60,11 @@ import io.github.conditionstech.sdm.downloads.DownloadItem
 import io.github.conditionstech.sdm.downloads.DownloadState
 import io.github.conditionstech.sdm.downloads.Downloads
 import io.github.conditionstech.sdm.downloads.SharedLinks
+import io.github.conditionstech.sdm.media.Conversion
+import io.github.conditionstech.sdm.media.ConversionState
+import io.github.conditionstech.sdm.media.Conversions
+import io.github.conditionstech.sdm.media.ConvertFormat
+import io.github.conditionstech.sdm.media.ConvertInput
 import io.github.conditionstech.sdm.engine.SdmException
 import io.github.conditionstech.sdm.engine.Units
 
@@ -71,10 +76,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val downloads = (application as SdmApplication).downloads
+        val app = application as SdmApplication
         if (savedInstanceState == null) takeShared(intent)
         setContent {
-            SdmTheme { HomeScreen(downloads, shared, onSharedHandled = { shared = null }) }
+            SdmTheme { HomeScreen(app.downloads, app.conversions, shared, onSharedHandled = { shared = null }) }
         }
     }
 
@@ -110,8 +115,10 @@ fun SdmTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(downloads: Downloads, shared: SharedLink? = null, onSharedHandled: () -> Unit = {}) {
+fun HomeScreen(downloads: Downloads, conversions: Conversions, shared: SharedLink? = null, onSharedHandled: () -> Unit = {}) {
     val items by downloads.items.collectAsState()
+    val converting by conversions.items.collectAsState()
+    var converts by remember { mutableStateOf<DownloadItem?>(null) }
     var adding by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var prefill by remember { mutableStateOf("") }
@@ -142,18 +149,25 @@ fun HomeScreen(downloads: Downloads, shared: SharedLink? = null, onSharedHandled
             }) { Text("Add URL") }
         },
     ) { padding ->
-        if (items.isEmpty()) {
+        if (items.isEmpty() && converting.isEmpty()) {
             EmptyList(Modifier.padding(padding))
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 8.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(items, key = { it.id }) { item -> DownloadRow(item, downloads) }
+                items(converting, key = { "c" + it.id }) { conversion -> ConversionRow(conversion, conversions) }
+                items(items, key = { it.id }) { item -> DownloadRow(item, downloads, onConvert = { converts = item }) }
             }
         }
     }
     if (showAbout) AboutDialog(onDismiss = { showAbout = false })
+    converts?.let { item ->
+        ConvertDialog(item, onDismiss = { converts = null }) { format ->
+            conversions.start(ConvertInput(item.savedUri!!, item.savedName ?: item.fileName ?: "download"), format)
+            converts = null
+        }
+    }
     if (adding) {
         AddUrlDialog(
             initialUrl = prefill,
@@ -234,7 +248,7 @@ private fun AddUrlDialog(initialUrl: String, initialError: String?, onDismiss: (
 }
 
 @Composable
-private fun DownloadRow(item: DownloadItem, downloads: Downloads) {
+private fun DownloadRow(item: DownloadItem, downloads: Downloads, onConvert: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
             Text(
@@ -276,7 +290,11 @@ private fun DownloadRow(item: DownloadItem, downloads: Downloads) {
                         TextButton(onClick = { downloads.resume(item.id) }) { Text("Retry") }
                         TextButton(onClick = { downloads.remove(item.id) }) { Text("Remove") }
                     }
-                    DownloadState.COMPLETED, DownloadState.CANCELLED ->
+                    DownloadState.COMPLETED -> {
+                        if (item.savedUri != null) TextButton(onClick = onConvert) { Text("Convert") }
+                        TextButton(onClick = { downloads.remove(item.id) }) { Text("Remove") }
+                    }
+                    DownloadState.CANCELLED ->
                         TextButton(onClick = { downloads.remove(item.id) }) { Text("Remove") }
                 }
             }
@@ -335,4 +353,68 @@ private fun AboutDialog(onDismiss: () -> Unit) {
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
     )
+}
+
+/** Converting a finished download (M15a): the three formats, explained. */
+@Composable
+private fun ConvertDialog(item: DownloadItem, onDismiss: () -> Unit, onChoose: (ConvertFormat) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Convert") },
+        text = {
+            Column {
+                Text(item.savedName ?: item.fileName.orEmpty(), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(8.dp))
+                for (format in ConvertFormat.entries) {
+                    TextButton(onClick = { onChoose(format) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(format.label, modifier = Modifier.fillMaxWidth())
+                    }
+                }
+                Text(
+                    "The result goes to Download/SDM; the original stays as it is.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun ConversionRow(conversion: Conversion, conversions: Conversions) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
+            Text(
+                conversion.savedName ?: conversion.targetName,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(end = 8.dp),
+            )
+            Spacer(Modifier.height(4.dp))
+            val line = when (conversion.state) {
+                ConversionState.RUNNING -> "Converting to ${conversion.format.name} · ${(conversion.progress * 100).toInt()}%"
+                ConversionState.COMPLETED -> "Converted · in Download/SDM"
+                ConversionState.FAILED -> conversion.error ?: "Conversion failed"
+                ConversionState.CANCELLED -> "Conversion cancelled"
+            }
+            Text(
+                line,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (conversion.state == ConversionState.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (conversion.state == ConversionState.RUNNING) {
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(progress = { conversion.progress }, modifier = Modifier.fillMaxWidth().padding(end = 8.dp))
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                if (conversion.state == ConversionState.RUNNING) {
+                    TextButton(onClick = { conversions.cancel(conversion.id) }) { Text("Cancel") }
+                } else {
+                    TextButton(onClick = { conversions.dismiss(conversion.id) }) { Text("Dismiss") }
+                }
+            }
+        }
+    }
 }

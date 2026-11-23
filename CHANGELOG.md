@@ -19,6 +19,9 @@ while SDM is in 0.x.
   Download/SDM.
 - M14e: "Download with SDM" in Android's share menu opens Add URL with the shared link; at
   most 3 downloads run at once and the rest wait their turn.
+- M15a: the Android converter: Convert a finished download to MP4 or M4A (no quality loss) or
+  MP3 (LAME), with progress, Cancel and notifications; Python 3.13, yt-dlp and LAME are now
+  inside the app (About lists them and their licences).
 - M13 marked done: the owner reported the 1.2.0 checks done (install, the new icon, adding
   the extension with the assistant, the button over videos, a normal link opening SDM). This
   also closes the install checks left open in M11 and M12 (roadmap).

@@ -17,6 +17,8 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        // Tests that need a phone (the real media converter): gradlew connectedDebugAndroidTest
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Chaquopy's Python 3.12+ exists for 64-bit phones only (ADR-0023).
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
@@ -72,4 +74,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
 }

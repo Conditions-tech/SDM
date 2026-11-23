@@ -22,6 +22,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
+import io.github.conditionstech.sdm.media.Conversion
+import io.github.conditionstech.sdm.media.ConversionState
 import kotlinx.coroutines.launch
 
 /**
@@ -33,17 +36,24 @@ class DownloadService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        val downloads = (application as SdmApplication).downloads
-        startInForeground(Notifications.progress(this, downloads.items.value))
+        val app = application as SdmApplication
+        startInForeground(Notifications.progress(this, app.downloads.items.value, app.conversions.items.value))
         scope.launch {
-            downloads.items.collect { items ->
-                if (items.none { it.active }) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
-                } else {
-                    Notifications.show(this@DownloadService, Notifications.PROGRESS_ID, Notifications.progress(this@DownloadService, items))
+            // Downloads and conversions both keep SDM running.
+            combine(app.downloads.items, app.conversions.items) { items, conversions -> items to conversions }
+                .collect { (items, conversions) ->
+                    val converting = conversions.any { it.state == ConversionState.RUNNING }
+                    if (items.none { it.active } && !converting) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                    } else {
+                        Notifications.show(
+                            this@DownloadService,
+                            Notifications.PROGRESS_ID,
+                            Notifications.progress(this@DownloadService, items, conversions),
+                        )
+                    }
                 }
-            }
         }
     }
 
@@ -59,8 +69,9 @@ class DownloadService : Service() {
 
     /** Android 15 limits data-sync services to 6 hours a day: pause everything, resumable later. */
     override fun onTimeout(startId: Int, fgsType: Int) {
-        val downloads = (application as SdmApplication).downloads
-        downloads.items.value.filter { it.active }.forEach { downloads.pause(it.id) }
+        val app = application as SdmApplication
+        app.downloads.items.value.filter { it.active }.forEach { app.downloads.pause(it.id) }
+        app.conversions.items.value.filter { it.state == ConversionState.RUNNING }.forEach { app.conversions.cancel(it.id) }
         stopSelf()
     }
 
@@ -94,8 +105,21 @@ object Notifications {
         )
     }
 
-    fun progress(context: Context, items: List<DownloadItem>): Notification {
+    fun progress(context: Context, items: List<DownloadItem>, conversions: List<Conversion> = emptyList()): Notification {
+        val converting = conversions.filter { it.state == ConversionState.RUNNING }
         val running = items.filter { it.active }
+        if (running.isEmpty() && converting.isNotEmpty()) {
+            val first = converting[0]
+            return NotificationCompat.Builder(context, PROGRESS_CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat_sdm)
+                .setContentTitle(if (converting.size == 1) "Converting ${first.sourceName}" else "Converting ${converting.size} files")
+                .setContentText("to ${first.format.name} · ${(first.progress * 100).toInt()}%")
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setContentIntent(openApp(context))
+                .setProgress(1000, (first.progress * 1000).toInt(), false)
+                .build()
+        }
         val received = running.sumOf { it.receivedBytes }
         val total = running.mapNotNull { it.totalBytes }.sum()
         val sizesKnown = running.all { it.totalBytes != null }
@@ -142,6 +166,22 @@ object Notifications {
             .setContentIntent(openApp(context))
             .build()
         show(context, (1000 + item.id).toInt(), notification)
+    }
+
+    fun converted(context: Context, conversion: Conversion) {
+        val (title, text) = when (conversion.state) {
+            ConversionState.COMPLETED -> "Conversion complete" to "${conversion.savedName} · saved in Download/SDM"
+            else -> "Conversion failed" to "${conversion.sourceName}: ${conversion.error.orEmpty()}"
+        }
+        val notification = NotificationCompat.Builder(context, FINISHED_CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_sdm)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+            .setContentIntent(openApp(context))
+            .build()
+        show(context, (500_000 + conversion.id).toInt(), notification)
     }
 
     /** Shows a notification if the user allowed them (Android 13+ asks); otherwise quietly skips. */

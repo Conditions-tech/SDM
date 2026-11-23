@@ -580,6 +580,15 @@ as well as M4A. The first Android release (M14f) comes after M15.
   1.7.0 in the app (debug APK 31 -> 74 MB, both 64-bit ABIs); an About screen with versions and
   licences. On the owner's phone (Android 16) About listed both tools, so Python starts there;
   the app opened in 1.2 s, no crash.
+  Converter done (2026-11-23): Convert on finished downloads (MP4 rewrap, M4A audio, MP3 via
+  MediaCodec + LAME), progress rows with Cancel, "Converting" and finished notifications, the
+  service kept alive while converting; results in Download/SDM. Conversions aren't kept in the
+  history (a stopped one is started again). Checked: 6 PC tests of `Conversions` (fake
+  converter) and 6 tests on the owner's phone (`ConverterDeviceTest`, Android 16) with
+  synthetic files made by ffmpeg: H.264+AAC to MP4 (both tracks, about 3 s), to M4A (AAC only),
+  to MP3 (MPEG audio, about 3 s, valid header), VP9+Opus WebM to MP3, and the messages for
+  Opus to M4A and for a video without sound. Xiaomi's "Install via USB" prompt must be
+  accepted on the phone for each test run.
 - M15b: video pages with yt-dlp in Chaquopy: Settings switch + terms notice; 720p, 1080p, MP3,
   M4A; MP4+M4A streams merged by MediaMuxer; pause/resume/cancel in the list; tests with a
   fake yt-dlp and a local page; one real check on the owner's phone, with their OK.

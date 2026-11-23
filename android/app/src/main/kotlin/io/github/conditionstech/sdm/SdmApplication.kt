@@ -8,6 +8,8 @@ import io.github.conditionstech.sdm.downloads.MediaStorePublisher
 import io.github.conditionstech.sdm.downloads.SqliteHistory
 import io.github.conditionstech.sdm.engine.DownloadSettings
 import io.github.conditionstech.sdm.engine.HttpDownloader
+import io.github.conditionstech.sdm.media.AndroidMediaConverter
+import io.github.conditionstech.sdm.media.Conversions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,6 +18,8 @@ import java.io.File
 /** Creates the one download list the screens and the service share. */
 class SdmApplication : Application() {
     lateinit var downloads: Downloads
+        private set
+    lateinit var conversions: Conversions
         private set
 
     override fun onCreate() {
@@ -33,6 +37,14 @@ class SdmApplication : Application() {
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
             onActive = { DownloadService.start(this) },
             onFinished = { Notifications.finished(this, it) },
+        )
+        conversions = Conversions(
+            converter = AndroidMediaConverter(this),
+            publisher = MediaStorePublisher(this),
+            workDir = work,
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+            onActive = { DownloadService.start(this) },
+            onFinished = { Notifications.converted(this, it) },
         )
     }
 }
