@@ -31,6 +31,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import io.github.conditionstech.sdm.library.MusicScreen
 import io.github.conditionstech.sdm.player.MiniPlayer
+import io.github.conditionstech.sdm.player.VideoPlayerActivity
+import androidx.compose.ui.platform.LocalContext
 import io.github.conditionstech.sdm.player.NowPlayingScreen
 import androidx.activity.compose.BackHandler
 import io.github.conditionstech.sdm.library.VideosScreen
@@ -98,6 +100,7 @@ import io.github.conditionstech.sdm.engine.Units
 fun SdmTabs(app: SdmApplication, shared: SharedLink?, onSharedHandled: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     LaunchedEffect(shared) { if (shared != null) tab = 0 }
+    val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showPlayer by rememberSaveable { mutableStateOf(false) }
@@ -135,7 +138,7 @@ fun SdmTabs(app: SdmApplication, shared: SharedLink?, onSharedHandled: () -> Uni
             when (tab) {
                 0 -> HomeScreen(app.downloads, app.conversions, app.preferences, shared, onSharedHandled)
                 1 -> TabPage("Music") { MusicScreen(app.library, app.playlists) { songs, song -> app.musicPlayer.play(songs, song) } }
-                else -> TabPage("Videos") { VideosScreen(app.library) { comingNext() } }
+                else -> TabPage("Videos") { VideosScreen(app.library) { video -> context.startActivity(VideoPlayerActivity.intent(context, video.uri, video.id, video.title)) } }
             }
         }
     }

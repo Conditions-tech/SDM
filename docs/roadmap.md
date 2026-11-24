@@ -759,6 +759,9 @@ whole phone's media after Android's permission. Steps (each to be approved befor
   the screen, gradient seek bar and play button, pill buttons). Found on the phone and fixed:
   Now Playing's title and icons were black on dark (no Surface), download titles dimmed, dark
   text on the Add URL button. Checked with screenshots on the owner's phone.
-- M17c: video player: full screen, swipe for brightness/volume/seek, double-tap +/-10 s, speed,
-  lock, resume position, .srt subtitles.
+- M17c (done): video player: full screen, swipe for brightness/volume/seek, double-tap +/-10 s,
+  speed (0.5x-2x), a touch lock, resume position (not the first 5 s or the last 10 s / 5 %),
+  .srt subtitles picked with the system file picker. The rules are in `VideoRules` (PC tests).
+  Checked on the owner's phone: playback, speed, volume swipe, lock/unlock, double-tap +10 s,
+  resume after leaving at 6 s, Back. Subtitles not yet tried on the phone.
 - M17d: polish, tests (fakes on the PC, on-phone checks), release 1.1.0.

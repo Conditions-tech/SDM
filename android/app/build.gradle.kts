@@ -89,6 +89,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.media3.exoplayer) // the players (M17, ADR-0025; Apache-2.0)
     implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.ui) // the video surface and subtitles (M17c)
 
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)

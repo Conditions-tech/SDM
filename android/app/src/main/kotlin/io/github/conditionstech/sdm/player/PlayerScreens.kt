@@ -248,7 +248,7 @@ fun NowPlayingScreen(player: MusicPlayer, timer: SleepTimer, playlists: Playlist
 
 /** A thin rounded track with the gradient fill and a white knob; drag or tap anywhere to seek. */
 @Composable
-private fun GradientSeekBar(fraction: Float, onDrag: (Float) -> Unit, onRelease: () -> Unit) {
+internal fun GradientSeekBar(fraction: Float, onDrag: (Float) -> Unit, onRelease: () -> Unit) {
     var width by remember { mutableFloatStateOf(1f) }
     Box(
         Modifier.fillMaxWidth().height(28.dp)

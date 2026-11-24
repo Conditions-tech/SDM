@@ -6,6 +6,9 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
+- M17c: the Android video player: full screen, swipes for brightness, volume and seeking,
+  double-tap to skip 10 s, speed, a touch lock, resume where you left off, and .srt subtitles.
+
 ## [android-1.0.0] - 2026-11-23
 
 SDM for Android 1.0.0, the first Android release (M14, M15). The entries below record how it
