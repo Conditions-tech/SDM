@@ -791,5 +791,10 @@ phone) to later and asked for the three steps below first (ADR-0026).
   on "Me at the zoo", the menu lists them, "0.5 s later" rewrote the times, and online search
   without a key explains what to do. Not yet tried on the phone: a real YouTube download with
   subtitles, a film with built-in subtitles, OpenSubtitles with a real key.
+- Real check, 2026-11-24: a YouTube 720p download worked but saved no subtitles. YouTube lists
+  English SRT for the video, yet refuses the subtitle file itself (HTTP 429), even to yt-dlp's
+  own request: YouTube now guards subtitle files with an anti-bot token. SDM won't get around
+  bot detection (non-negotiable rules), so page subtitles work for sites without that guard;
+  YouTube films need OpenSubtitles (or Whisper later).
 - Later (M18d, optional): Whisper (whisper.cpp) to make English subtitles on the phone for
   videos with none anywhere; first a speed test on the owner's phone.
