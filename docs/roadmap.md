@@ -750,6 +750,15 @@ whole phone's media after Android's permission. Steps (each to be approved befor
   Rename, Delete, Remove), long-press a song or "+ Add to playlist" in Now Playing. Checked on
   the owner's phone: a playlist created, a song added by long-press, Play all played it, and it
   was still there after a force-stop. M17b done. Not done: reordering songs in a playlist.
+- Design refresh and a fix (2026-11-24, owner's report: "dubbed audio, not the original", and
+  the look "not good enough"): video pages now choose by yt-dlp's language preference first
+  (10 original, 5 default, -1 dubbed, -10 described), then quality (2 regression tests). The
+  owner chose a dark, artwork-led design: `ui/Theme.kt` (always dark, the logo's indigo-to-sky
+  gradient as the accent, bold titles, rounded shapes), covers from the files themselves in
+  lists, the mini player (with a progress line) and Now Playing (large cover blurred behind
+  the screen, gradient seek bar and play button, pill buttons). Found on the phone and fixed:
+  Now Playing's title and icons were black on dark (no Surface), download titles dimmed, dark
+  text on the Add URL button. Checked with screenshots on the owner's phone.
 - M17c: video player: full screen, swipe for brightness/volume/seek, double-tap +/-10 s, speed,
   lock, resume position, .srt subtitles.
 - M17d: polish, tests (fakes on the PC, on-phone checks), release 1.1.0.

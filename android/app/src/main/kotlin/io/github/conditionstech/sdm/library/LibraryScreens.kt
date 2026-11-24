@@ -11,6 +11,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.graphics.Color
+import io.github.conditionstech.sdm.ui.Artwork
+import io.github.conditionstech.sdm.ui.SdmColors
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -182,11 +187,18 @@ private fun AccessBanner(library: MediaStoreLibrary, kind: MediaKind) {
 
 @Composable
 private fun SearchBox(value: String, hint: String, onChange: (String) -> Unit) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onChange,
         placeholder = { Text(hint) },
         singleLine = true,
+        shape = RoundedCornerShape(50),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = SdmColors.Raised,
+            unfocusedContainerColor = SdmColors.Raised,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+        ),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
     )
 }
@@ -211,11 +223,13 @@ private fun SongList(
             Row(
                 Modifier.fillMaxWidth()
                     .combinedClickable(onClick = { onClick(song) }, onLongClick = onLongPress?.let { { it(song) } })
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Artwork(song.uri, 52.dp, corner = 12.dp, pixels = 160)
+                Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(song.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(song.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
                         "${song.artistOrUnknown} · ${song.albumOrUnknown}",
                         style = MaterialTheme.typography.bodySmall,

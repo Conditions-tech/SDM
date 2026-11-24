@@ -3,6 +3,7 @@ package io.github.conditionstech.sdm.player
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -25,6 +26,7 @@ data class NowPlaying(
     val index: Int = 0,
     val queue: List<String> = emptyList(), // titles, in play order of the list
     val mediaId: Long? = null, // the current song, for "Add to playlist"
+    val uri: String? = null, // the current song's file, for its cover picture
 ) {
     val hasMedia: Boolean get() = queue.isNotEmpty()
 }
@@ -70,6 +72,7 @@ class MusicPlayer(private val context: Context) {
                         .setTitle(song.title)
                         .setArtist(song.artistOrUnknown)
                         .setAlbumTitle(song.albumOrUnknown)
+                        .setExtras(Bundle().apply { putString(SONG_URI, song.uri) })
                         .build(),
                 )
                 .build()
@@ -112,7 +115,10 @@ class MusicPlayer(private val context: Context) {
             repeatMode = player.repeatMode,
             index = player.currentMediaItemIndex,
             mediaId = player.currentMediaItem?.mediaId?.toLongOrNull(),
+            uri = metadata.extras?.getString(SONG_URI),
             queue = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaMetadata.title?.toString().orEmpty() },
         )
     }
 }
+
+private const val SONG_URI = "sdm.song_uri"

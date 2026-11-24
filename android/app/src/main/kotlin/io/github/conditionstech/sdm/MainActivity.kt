@@ -7,7 +7,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import io.github.conditionstech.sdm.ui.SdmTheme
+import io.github.conditionstech.sdm.ui.SdmColors
+import io.github.conditionstech.sdm.ui.ScreenTitle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -45,6 +49,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
@@ -108,7 +114,7 @@ fun SdmTabs(app: SdmApplication, shared: SharedLink?, onSharedHandled: () -> Uni
         bottomBar = {
             Column {
             MiniPlayer(app.musicPlayer) { showPlayer = true }
-            NavigationBar {
+            NavigationBar(containerColor = SdmColors.Surface) {
                 listOf(
                     Triple("Downloads", R.drawable.ic_tab_downloads, 0),
                     Triple("Music", R.drawable.ic_tab_music, 1),
@@ -138,7 +144,7 @@ fun SdmTabs(app: SdmApplication, shared: SharedLink?, onSharedHandled: () -> Uni
 @Composable
 private fun TabPage(title: String, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
-        Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp))
+        Text(title, style = ScreenTitle, modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp))
         content()
     }
 }
@@ -150,7 +156,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // SDM is always dark (owner's design choice): light status and navigation bar icons.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         val app = application as SdmApplication
         if (savedInstanceState == null) takeShared(intent)
         setContent {
@@ -173,20 +183,6 @@ class MainActivity : ComponentActivity() {
 
 /** [url] is null when the shared text had no address SDM can download. */
 class SharedLink(val url: String?)
-
-// The logo's indigo and sky blue (ADR-0021).
-private val Indigo = Color(0xFF4F46E5)
-private val Sky = Color(0xFF0EA5E9)
-
-@Composable
-fun SdmTheme(content: @Composable () -> Unit) {
-    val colors = if (isSystemInDarkTheme()) {
-        darkColorScheme(primary = Sky, secondary = Indigo)
-    } else {
-        lightColorScheme(primary = Indigo, secondary = Sky)
-    }
-    MaterialTheme(colorScheme = colors, content = content)
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -230,7 +226,7 @@ fun HomeScreen(
         contentWindowInsets = WindowInsets.statusBars,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
+                title = { Text("Downloads", style = ScreenTitle) },
                 actions = {
                     TextButton(onClick = { showSettings = true }) { Text("Settings") }
                     TextButton(onClick = { showAbout = true }) { Text("About") }
@@ -238,7 +234,7 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = {
+            ExtendedFloatingActionButton(containerColor = SdmColors.Indigo, contentColor = Color.White, onClick = {
                 prefill = ""
                 prefillError = null
                 prefillChoice = null
@@ -375,7 +371,7 @@ private fun AddUrlDialog(
 
 @Composable
 private fun DownloadRow(item: DownloadItem, downloads: Downloads, onConvert: () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = SdmColors.Raised, contentColor = SdmColors.Text)) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
             Text(
                 item.savedName ?: item.fileName ?: item.url,
@@ -490,7 +486,7 @@ private fun ConvertDialog(item: DownloadItem, onDismiss: () -> Unit, onChoose: (
 
 @Composable
 private fun ConversionRow(conversion: Conversion, conversions: Conversions) {
-    Card(Modifier.fillMaxWidth()) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = SdmColors.Raised, contentColor = SdmColors.Text)) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
             Text(
                 conversion.savedName ?: conversion.targetName,
