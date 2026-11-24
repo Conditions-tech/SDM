@@ -104,4 +104,32 @@ class VideoPagesTest {
         assertEquals(listOf("v2", "a"), VideoPages.choose(av1Only, VideoChoice.P1080, av1 = true).streams.map { it.id })
         assertThrows(VideoPageException::class.java) { VideoPages.choose(av1Only, VideoChoice.P720, av1 = false) }
     }
+
+    // A YouTube video with auto-dubbed sound (the owner's report, 2026-11-24): one audio track
+    // per language; the dubbed ones can have a higher bitrate than the original.
+    private fun audio(id: String, ext: String, codec: String, tbr: Double, pref: Int) =
+        """{"id":"$id","url":"https://cdn.test/$id","ext":"$ext","vcodec":"none","acodec":"$codec","height":0,"tbr":$tbr,"size":0,"lang_pref":$pref,"headers":{}}"""
+
+    private val dubbed = VideoPages.parse(
+        """{"title":"d","streams":[${audio("140-hi", "m4a", "mp4a.40.2", 130.0, -1)},""" +
+            """${audio("140-en", "m4a", "mp4a.40.2", 128.0, 10)},${audio("140-es", "m4a", "mp4a.40.2", 129.0, 5)},""" +
+            """${audio("251-hi", "webm", "opus", 160.0, -1)},${audio("251-en", "webm", "opus", 150.0, 10)},""" +
+            """${audio("140-ad", "m4a", "mp4a.40.2", 200.0, -10)},${stream("136", "mp4", "avc1.4d401f", "none", 720, 2000.0)}]}""",
+    )
+
+    @Test
+    fun theOriginalLanguageWinsOverDubsAndDescriptions() {
+        assertEquals("140-en", VideoPages.choose(dubbed, VideoChoice.M4A).audio!!.id)
+        assertEquals("140-en", VideoPages.choose(dubbed, VideoChoice.MP3).audio!!.id)
+        assertEquals(listOf("136", "140-en"), VideoPages.choose(dubbed, VideoChoice.P720).streams.map { it.id })
+    }
+
+    @Test
+    fun mp3TakesAnOriginalNonAacTrackRatherThanADubbedAacOne() {
+        val page = VideoPages.parse(
+            """{"title":"d","streams":[${audio("140-hi", "m4a", "mp4a.40.2", 128.0, -1)},${audio("251-en", "webm", "opus", 150.0, 10)}]}""",
+        )
+        assertEquals("251-en", VideoPages.choose(page, VideoChoice.MP3).audio!!.id)
+        assertEquals("140-hi", VideoPages.choose(page, VideoChoice.M4A).audio!!.id) // M4A needs AAC: only the dub has it
+    }
 }

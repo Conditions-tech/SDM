@@ -105,6 +105,11 @@ def extract(url: str) -> str:
                 "acodec": f.get("acodec") or "",
                 "height": f.get("height") or 0,
                 "width": f.get("width") or 0,
+                # Videos with dubbed sound list one audio track per language. yt-dlp scores
+                # them: 10 = original, 5 = the video's default, -1 = other dubs, -10 = audio
+                # description. SDM chooses by this first (the owner got a dubbed MP3).
+                "lang_pref": f.get("language_preference") or 0,
+                "language": f.get("language") or "",
                 "tbr": f.get("tbr") or 0,
                 "size": f.get("filesize") or f.get("filesize_approx") or 0,
                 "headers": headers,

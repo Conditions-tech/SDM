@@ -30,6 +30,8 @@ data class Stream(
     val headers: Map<String, String>,
     val order: Int = 0, // position in yt-dlp's list, which runs from worst to best
     val width: Int = 0,
+    /** yt-dlp's score for the sound's language: 10 original, 5 default, -1 dubbed, -10 described. */
+    val languagePreference: Int = 0,
 ) {
     /** "720p" means the shorter side, so a portrait reel (720 x 1280) counts as 720p. */
     val quality: Int get() = if (width > 0 && height > 0) minOf(width, height) else height
@@ -73,6 +75,7 @@ object VideoPages {
                 acodec = s.optString("acodec", "").lowercase(),
                 height = s.optInt("height", 0),
                 width = s.optInt("width", 0),
+                languagePreference = s.optInt("lang_pref", 0),
                 bitrate = s.optDouble("tbr", 0.0).takeUnless { it.isNaN() } ?: 0.0,
                 size = s.optLong("size", 0),
                 headers = headers,
@@ -86,11 +89,17 @@ object VideoPages {
     fun choose(info: PageInfo, choice: VideoChoice, av1: Boolean = false): StreamPlan {
         val streams = info.streams
         if (streams.isEmpty()) throw VideoPageException("No downloadable video was found on this page.")
-        val aacAudio = streams.filter { !it.hasVideo && it.hasAudio && it.isAac }.maxByOrNull { it.bitrate }
+        // The original language first (never a dub when the original exists), then quality.
+        val bestSound = compareBy<Stream>({ it.languagePreference }, { it.bitrate })
+        val aacAudio = streams.filter { !it.hasVideo && it.hasAudio && it.isAac }.maxWithOrNull(bestSound)
         if (choice.audioOnly) {
             val audio = when (choice) {
                 VideoChoice.M4A -> aacAudio
-                else -> aacAudio ?: streams.filter { !it.hasVideo && it.hasAudio }.maxByOrNull { it.bitrate }
+                else -> {
+                    // MP3 can start from any sound: the best original track, even if it isn't AAC.
+                    val any = streams.filter { !it.hasVideo && it.hasAudio }.maxWithOrNull(bestSound)
+                    if (aacAudio == null || (any != null && any.languagePreference > aacAudio.languagePreference)) any else aacAudio
+                }
             } ?: streams.filter { it.hasAudio && (choice == VideoChoice.MP3 || it.isAac) }.minByOrNull { it.height }
                 // MP3 can also start from a ready-made MP4's sound, whatever yt-dlp knows about it.
                 ?: streams.filter { it.codecsUnknown && it.ext == "mp4" && choice == VideoChoice.MP3 }.minByOrNull { it.order }
