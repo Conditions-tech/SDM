@@ -67,7 +67,9 @@ the browser reach it, and SDM shows a warning.
 SDM also runs on Android phones (Android 10 or newer, 64-bit): the same fast downloads with
 pause and resume, **Share → Download with SDM** from any app, a converter (MP4, M4A, MP3) and,
 if you turn them on in Settings, video pages (YouTube, Facebook, Instagram and more; public
-videos only, never with your accounts). Download `SDM-android-<version>.apk` from the
+videos only, never with your accounts). Since 1.1.0 it also has a music player (playlists,
+sleep timer, background play) and a video player (swipe gestures, speed, resume) with English
+subtitles (from the file, your own .srt, or OpenSubtitles.com). Download `SDM-android-<version>.apk` from the
 [releases](../../releases) (look for "SDM for Android") and open it on your phone; Android asks
 once to allow installing it. The source is in [android/](android/).
 

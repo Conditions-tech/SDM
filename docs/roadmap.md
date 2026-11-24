@@ -21,8 +21,8 @@ and its tests have actually run and passed.
 | M13 | SDM's own logo and look, a button over videos, the extension shipped with SDM | Done (2026-10-26) |
 | M14 | Android version: a native Kotlin app (APK) | Done (2026-11-23; SDM for Android 1.0.0 released) |
 | M15 | Media on Android: converter (MP4, M4A, MP3) and video pages (yt-dlp, off by default) | Done (2026-11-23; released in Android 1.0.0) |
-| M17 | Android: music and video players | Planned (ADR-0025) |
-| M18 | Android: English subtitles (in the file, from the page, from OpenSubtitles) | In progress (ADR-0026) |
+| M17 | Android: music and video players | Done (2026-11-24; SDM for Android 1.1.0) |
+| M18 | Android: English subtitles (in the file, from the page, from OpenSubtitles) | M18a-c done in 1.1.0; OpenSubtitles waits for the owner's key; M18d (Whisper) later (ADR-0026) |
 
 ## M0: Environment inspection (done)
 
@@ -711,7 +711,7 @@ history, MediaStore saving, Share and their tests were never committed; `android
 now un-ignores `app/src/**/downloads/`. A fresh clone of the branch then built and passed all
 106 tests (72 engine, 34 app). From now on, release checks build from a fresh clone.
 
-## M17: Music and video players on Android (planned)
+## M17: Music and video players on Android (done)
 
 Asked for by the owner on 2026-11-23 (like Mi Music and MX Player); decisions in ADR-0025:
 SDM may play audio and video (never open or install anything else), and the players show the
@@ -765,7 +765,9 @@ whole phone's media after Android's permission. Steps (each to be approved befor
   .srt subtitles picked with the system file picker. The rules are in `VideoRules` (PC tests).
   Checked on the owner's phone: playback, speed, volume swipe, lock/unlock, double-tap +10 s,
   resume after leaving at 6 s, Back. Subtitles not yet tried on the phone.
-- M17d: polish, tests (fakes on the PC, on-phone checks), release 1.1.0.
+- M17d (done): release 1.1.0 together with M18a-c: version 1.1.0 (code 2), release notes,
+  CHANGELOG, README; every check run again (engine and app tests, lint, debug build) and the
+  phone checked. Not done: reordering songs inside a playlist.
 
 ## M18: English subtitles on Android (in progress)
 

@@ -16,8 +16,8 @@ android {
         minSdk = 29 // Android 10: Download/SDM through MediaStore without a storage permission.
         targetSdk = 37
         // The Android app has its own versions, released with tags like android-v1.0.0 (M14f).
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
         // Tests that need a phone (the real media converter): gradlew connectedDebugAndroidTest
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Chaquopy's Python 3.12+ exists for 64-bit phones only (ADR-0024).

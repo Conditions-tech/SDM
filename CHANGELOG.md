@@ -6,14 +6,27 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
-- M18: English subtitles on Android. The video player's Subtitles menu lists subtitles inside
-  the file (English is chosen by itself), loads .srt/.vtt files, and finds English subtitles
-  on OpenSubtitles.com (your own free API key in Settings). Video-page downloads also save the
-  page's English subtitles (YouTube can translate any language). Saved subtitles load by
-  themselves and can be moved 0.5 s earlier or later.
+## [android-1.1.0] - 2026-11-24
 
-- M17c: the Android video player: full screen, swipes for brightness, volume and seeking,
-  double-tap to skip 10 s, speed, a touch lock, resume where you left off, and .srt subtitles.
+SDM for Android 1.1.0 (M17 players, M18 subtitles).
+
+- M17a: Music and Videos tabs: the phone's songs (by songs, albums, artists, folders) and
+  videos, with search and sorting; Android's media permission is asked from a card, never at
+  install.
+- M17b: the music player: queue, shuffle, repeat, background play with notification and
+  lock-screen controls, playlists (create, rename, delete, add by long-press or from Now
+  Playing), and a sleep timer (15-90 minutes, custom 1-1440, end of song; 10 s fade-out).
+- M17c: the video player: full screen, swipes for brightness, volume and seeking, double-tap
+  to skip 10 s, speed, a touch lock, and resume where you left off.
+- M18: English subtitles. The player's Subtitles menu lists subtitles inside the file (English
+  is chosen by itself), loads .srt/.vtt files, and finds English subtitles on OpenSubtitles.com
+  (your own free API key in Settings). Video-page downloads also save the page's English
+  subtitles where the site allows it (YouTube refuses subtitle files without its anti-bot
+  token, so not YouTube). Saved subtitles load by themselves and can be moved 0.5 s.
+- Video pages: the original audio track is always chosen over dubbed ones (a YouTube MP3 came
+  out dubbed).
+- A new dark design led by album art (the owner's choice); fixed dark-on-dark text in Now
+  Playing, dimmed download titles and the Add URL button's text.
 
 ## [android-1.0.0] - 2026-11-23
 
