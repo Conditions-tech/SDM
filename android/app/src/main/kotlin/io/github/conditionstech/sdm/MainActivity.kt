@@ -1,5 +1,9 @@
 package io.github.conditionstech.sdm
 
+import io.github.conditionstech.sdm.player.SubtitleException
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import android.Manifest
 import android.os.Build
 import android.content.Intent
@@ -533,19 +537,21 @@ private fun SettingsDialog(preferences: Preferences, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text("Settings") },
         text = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Download from video pages", style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        "Adds 720p, 1080p, MP3 and M4A to Add URL, using the yt-dlp built into SDM.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = preferences.videoPagesEnabled,
-                    onCheckedChange = { on -> if (on) notice = true else preferences.setVideoPages(false) },
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                SettingSwitch(
+                    "Download from video pages",
+                    "Adds 720p, 1080p, MP3 and M4A to Add URL, using the yt-dlp built into SDM.",
+                    preferences.videoPagesEnabled,
+                ) { on -> if (on) notice = true else preferences.setVideoPages(false) }
+                Spacer(Modifier.height(16.dp))
+                SettingSwitch(
+                    "Save English subtitles with videos",
+                    "When a video page has English subtitles (YouTube can translate them), the player shows them.",
+                    preferences.saveSubtitles,
+                    preferences::changeSaveSubtitles,
                 )
+                Spacer(Modifier.height(16.dp))
+                OpenSubtitlesSettings(preferences)
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
@@ -572,3 +578,87 @@ private fun SettingsDialog(preferences: Preferences, onDismiss: () -> Unit) {
         )
     }
 }
+
+@Composable
+private fun SettingSwitch(title: String, detail: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+/**
+ * M18c: the user's own OpenSubtitles.com API key, and an optional sign-in for more downloads a
+ * day. The password is sent once to OpenSubtitles and never stored; only the token is kept.
+ */
+@Composable
+private fun OpenSubtitlesSettings(preferences: Preferences) {
+    val app = LocalContext.current.applicationContext as SdmApplication
+    val scope = rememberCoroutineScope()
+    var key by remember { mutableStateOf(preferences.openSubtitlesKey) }
+    var user by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    Text("OpenSubtitles (find subtitles online)", style = MaterialTheme.typography.titleSmall)
+    Text(
+        "Create a free account and API key at opensubtitles.com (Profile, API consumers), then paste the key here.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    OutlinedTextField(
+        value = key,
+        onValueChange = { key = it.trim(); preferences.changeOpenSubtitlesKey(it) },
+        label = { Text("API key") },
+        singleLine = true,
+        visualTransformation = PasswordVisualTransformation(),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
+    val signedIn = preferences.openSubtitlesUser
+    if (signedIn != null) {
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Signed in as $signedIn", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = { preferences.setOpenSubtitlesLogin(null, null) }) { Text("Sign out") }
+        }
+    } else {
+        Text(
+            "Optional: sign in for more downloads a day. SDM keeps the sign-in, not the password.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        OutlinedTextField(user, { user = it }, label = { Text("Username") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            password,
+            { password = it },
+            label = { Text("Password") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        TextButton(
+            enabled = !busy && key.isNotBlank() && user.isNotBlank() && password.isNotEmpty(),
+            onClick = {
+                busy = true
+                status = null
+                scope.launch {
+                    try {
+                        val client = app.openSubtitles() ?: throw SubtitleException("Paste your API key first.")
+                        val token = client.login(user.trim(), password)
+                        preferences.setOpenSubtitlesLogin(user.trim(), token)
+                        password = ""
+                    } catch (e: SubtitleException) {
+                        status = e.message
+                    } finally {
+                        busy = false
+                    }
+                }
+            },
+        ) { Text(if (busy) "Signing in…" else "Sign in") }
+    }
+    status?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+}
+

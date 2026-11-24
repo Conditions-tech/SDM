@@ -115,7 +115,28 @@ def extract(url: str) -> str:
                 "headers": headers,
             }
         )
-    return json.dumps({"title": info.get("title") or "video", "streams": streams})
+    return json.dumps(
+        {"title": info.get("title") or "video", "streams": streams, "captions": _english_captions(info)}
+    )
+
+
+_CAPTION_EXTS = ("srt", "vtt", "srv1")
+
+
+def _english_captions(info: dict) -> list:
+    """English subtitles (M18b): the site's own ones, then automatic ones (YouTube translates
+    any language into English). Only direct http(s) files in formats SDM reads."""
+    found = []
+    for source, auto in (("subtitles", False), ("automatic_captions", True)):
+        for lang, formats in (info.get(source) or {}).items():
+            if not (lang == "en" or lang.startswith("en-")):
+                continue
+            for f in formats or []:
+                url = f.get("url") or ""
+                ext = f.get("ext") or ""
+                if url.startswith(("https://", "http://")) and ext in _CAPTION_EXTS:
+                    found.append({"lang": lang, "ext": ext, "url": url, "auto": auto})
+    return found
 
 
 def _short(message: str) -> str:

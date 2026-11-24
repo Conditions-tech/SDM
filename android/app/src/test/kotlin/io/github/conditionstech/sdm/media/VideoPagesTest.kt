@@ -132,4 +132,21 @@ class VideoPagesTest {
         assertEquals("251-en", VideoPages.choose(page, VideoChoice.MP3).audio!!.id)
         assertEquals("140-hi", VideoPages.choose(page, VideoChoice.M4A).audio!!.id) // M4A needs AAC: only the dub has it
     }
+
+    @Test
+    fun englishCaptionsAreReadAndThePeopleMadeOnesChosenFirst() {
+        val json = """{"title":"t","streams":[],"captions":[
+            {"lang":"en","ext":"vtt","url":"https://c/auto.vtt","auto":true},
+            {"lang":"en-GB","ext":"vtt","url":"https://c/gb.vtt","auto":false},
+            {"lang":"en","ext":"json3","url":"https://c/x.json3","auto":false},
+            {"lang":"en","ext":"srt","url":"javascript:alert(1)","auto":false},
+            {"lang":"en","ext":"srv1","url":"https://c/auto.srv1","auto":true}
+        ]}"""
+        val info = VideoPages.parse(json)
+        assertEquals(3, info.captions.size) // unreadable formats and odd addresses are dropped
+        assertEquals("https://c/gb.vtt", VideoPages.chooseCaption(info.captions)?.url)
+        val automatic = info.captions.filter { it.automatic }
+        assertEquals("https://c/auto.srv1", VideoPages.chooseCaption(automatic)?.url) // srv1 before WebVTT
+        assertEquals(null, VideoPages.chooseCaption(emptyList()))
+    }
 }

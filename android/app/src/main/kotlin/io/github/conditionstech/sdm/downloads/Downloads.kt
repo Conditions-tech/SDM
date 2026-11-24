@@ -10,7 +10,9 @@ import io.github.conditionstech.sdm.media.ConversionException
 import io.github.conditionstech.sdm.media.ConvertFormat
 import io.github.conditionstech.sdm.media.VideoChoice
 import io.github.conditionstech.sdm.media.VideoPageException
+import io.github.conditionstech.sdm.media.PageInfo
 import io.github.conditionstech.sdm.media.VideoPages
+import io.github.conditionstech.sdm.player.Captions
 import io.github.conditionstech.sdm.media.VideoTools
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -46,6 +48,10 @@ class Downloads(
     private val videoTools: VideoTools? = null, // video pages (M15b), when the app has them
     private val av1InMp4: Boolean = false, // Android 14+ can put AV1 video into MP4
     private val clock: () -> Long = System::currentTimeMillis,
+    /** M18b: save the page's English subtitles with a video (a setting, read at each download). */
+    private val wantSubtitles: () -> Boolean = { false },
+    /** Receives a saved video's address (Download/SDM) and its subtitles. */
+    private val onSubtitles: (savedUri: String, cues: List<Captions.Cue>) -> Unit = { _, _ -> },
 ) {
     private val lock = Any()
     private val jobs = HashMap<Long, Job>()
@@ -183,6 +189,13 @@ class Downloads(
                 return
             }
             result.file.delete()
+            if (result.subtitles.isNotEmpty()) {
+                try {
+                    onSubtitles(saved.uri, result.subtitles)
+                } catch (e: IOException) {
+                    // The video is saved; subtitles are a bonus.
+                }
+            }
             forgetVideo(id)
             val done = change(id, store = true) {
                 it.copy(
@@ -220,7 +233,14 @@ class Downloads(
     }
 
     /** What a finished download hands to the publisher. */
-    private class Finished(val file: File, val name: String, val size: Long, val verified: Boolean, val contentType: String?)
+    private class Finished(
+        val file: File,
+        val name: String,
+        val size: Long,
+        val verified: Boolean,
+        val contentType: String?,
+        val subtitles: List<Captions.Cue> = emptyList(),
+    )
 
     /** A video page's streams across pauses (in memory: after a restart they start over). */
     private class VideoProgress(val count: Int) {
@@ -281,7 +301,27 @@ class Downloads(
             plan.audio != null -> tools.merge(files[0], files[1], output)
             else -> files[0].copyTo(output)
         }
-        return Finished(output, name, output.length(), verified = true, contentType = null)
+        val subtitles = if (choice.audioOnly || !wantSubtitles()) emptyList() else captions(id, info)
+        return Finished(output, name, output.length(), verified = true, contentType = null, subtitles = subtitles)
+    }
+
+    /**
+     * The page's English subtitles (M18b), fetched by the engine (network policy) and read as
+     * untrusted text. Best effort: any problem just means no subtitles.
+     */
+    private suspend fun captions(id: Long, info: PageInfo): List<Captions.Cue> {
+        val caption = VideoPages.chooseCaption(info.captions) ?: return emptyList()
+        val directory = File(workDir, "captions-$id").apply { mkdirs() }
+        return try {
+            val file = downloader.download(caption.url, directory, object : DownloadListener {}).file
+            if (file.length() > Captions.MAX_BYTES) emptyList() else Captions.parse(file.readText(), caption.ext)
+        } catch (e: SdmException) {
+            emptyList()
+        } catch (e: IOException) {
+            emptyList()
+        } finally {
+            directory.deleteRecursively()
+        }
     }
 
     /** Deletes a video page's stream files and partial files (SDM's own only). */

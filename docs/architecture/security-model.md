@@ -99,6 +99,13 @@ The Android engine (`android/engine`) applies the same rules with its own code a
   the page pass an allow-list (never Cookie or Authorization; short printable values only).
   Still not covered: the hosts yt-dlp itself contacts while reading the page after redirects
   or API calls.
+- Subtitles (M18, ADR-0026): subtitle files (picked, from a page, from OpenSubtitles) are
+  untrusted text: capped at 4 MiB, parsed without throwing, markup stripped, stored as SRT in
+  the app's private storage. Page captions and OpenSubtitles files are fetched by SDM's engine;
+  OpenSubtitles API calls use `policyClient` (the same network policy and socket check, no
+  automatic redirects). The user's OpenSubtitles API key and sign-in token are kept in the
+  app's private preferences and never logged; the password is not stored. A search sends the
+  file's movie hash and name to OpenSubtitles, only when the user taps it.
 - A fix to a safety rule must be made in both engines.
 
 ## Environment notes

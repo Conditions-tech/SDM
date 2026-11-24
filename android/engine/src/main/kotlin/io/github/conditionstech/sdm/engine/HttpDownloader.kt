@@ -50,23 +50,13 @@ class HttpDownloader(
 ) {
     private val checkingDns = PolicyDns(policy, dns)
 
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .apply(configureClient)
-        .dns(checkingDns)
-        .proxy(Proxy.NO_PROXY) // a proxy would hide the real destination from the policy
-        .followRedirects(false) // followed by hand: every hop is checked
-        .followSslRedirects(false)
-        .retryOnConnectionFailure(false) // SDM's own retries decide
-        .connectTimeout(settings.connectTimeoutMs, TimeUnit.MILLISECONDS)
-        .readTimeout(settings.readTimeoutMs, TimeUnit.MILLISECONDS)
-        .addNetworkInterceptor { chain ->
-            // Safety net: the address actually connected to, whatever led there.
-            chain.connection()?.route()?.socketAddress?.address?.let {
-                policy.check(it, chain.request().url.host)
-            }
-            chain.proceed(chain.request())
-        }
-        .build()
+    private val client = policyClient(
+        policy,
+        dns,
+        connectTimeoutMs = settings.connectTimeoutMs,
+        readTimeoutMs = settings.readTimeoutMs,
+        configure = configureClient,
+    )
 
     /**
      * Downloads [url] into [directory] and returns where the file was saved.

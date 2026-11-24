@@ -765,3 +765,29 @@ deleted. A changed decision gets a new record that supersedes the old one.
   also asks READ_MEDIA_VISUAL_USER_SELECTED so a "selected videos" choice works. Not built:
   playing YouTube without ads in the background (YouTube Premium's feature; against YouTube's
   terms and the no-paywall-bypass rule), declined even for private use.
+
+## ADR-0026: English subtitles on Android (M18)
+
+- **Date:** 2026-11-24 · **Status:** Accepted (owner approved the plan; Whisper deferred)
+- **Context:** The owner wants English subtitles for films in any language, matched to the
+  video. Options: tracks already in the file, the video page's own subtitles, a subtitle
+  database, or speech recognition on the phone (Whisper).
+- **Decision:**
+  - Use, in order of cost: tracks in the file (Media3, no new library); the page's English
+    subtitles through the yt-dlp already in SDM; OpenSubtitles.com's official REST API.
+  - Each video's subtitles are stored as SRT in the app's private storage, named by a SHA-1
+    of the video's MediaStore id (the same id whichever collection saved it), so no storage
+    permission is needed and other apps can't change them.
+  - Every subtitle file is untrusted: size-capped (4 MiB), parsed without throwing, markup
+    stripped (only `<i>` kept in SRT). Files are fetched by SDM's engine, so the network
+    policy applies; the API calls use a new shared `policyClient` (the downloader's own safe
+    OkHttp settings: checked DNS, no proxy, no automatic redirects, socket check).
+  - OpenSubtitles: the user's own free API key, typed in Settings; optional sign-in sends the
+    password once and keeps only the token. Neither is logged. The movie hash and the file
+    name go to OpenSubtitles only when the user asks for a search. A download link must be
+    https.
+  - No new dependency (OkHttp and org.json were already used).
+- **Deferred:** Whisper (whisper.cpp, MIT) to make subtitles on the phone: needs the Android
+  NDK and a 75-500 MB model; a speed test on the owner's phone comes first.
+- **Consequences:** online search needs an account and has a small daily limit; films that
+  aren't in the database, and home videos, still get no subtitles until Whisper.

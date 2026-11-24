@@ -1,5 +1,17 @@
 package io.github.conditionstech.sdm.player
 
+import java.nio.ByteBuffer
+import java.io.FileInputStream
+import java.io.File
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import io.github.conditionstech.sdm.engine.SdmException
+import io.github.conditionstech.sdm.engine.DownloadListener
+import io.github.conditionstech.sdm.SdmApplication
+import androidx.media3.common.Tracks
+import androidx.lifecycle.lifecycleScope
+import android.provider.OpenableColumns
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
@@ -85,8 +97,14 @@ class VideoPlayerActivity : ComponentActivity() {
     private lateinit var videoUri: Uri
     private var videoId = 0L
 
+    private val app get() = application as SdmApplication
+    private val subtitleKey get() = if (videoId != 0L) SubtitleStore.keyFor(videoId) else "uri:$videoUri"
+
+    /** A short message about subtitles, shown on the player. */
+    private val subtitleStatus = mutableStateOf<String?>(null)
+
     private val pickSubtitles = registerForActivityResult(ActivityResultContracts.OpenDocument()) { picked ->
-        if (picked != null) loadSubtitles(picked)
+        if (picked != null) lifecycleScope.launch { importSubtitles(picked) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -109,7 +127,11 @@ class VideoPlayerActivity : ComponentActivity() {
                 true, // takes the audio focus: SDM's music pauses while a video plays
             )
             .build()
-        player.setMediaItem(MediaItem.fromUri(videoUri))
+        // Subtitles inside the file: English is chosen by itself when the file has it (M18a).
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setPreferredTextLanguage("en")
+            .build()
+        player.setMediaItem(mediaItem())
         savedPosition()?.let { player.seekTo(it) }
         player.prepare()
         player.play()
@@ -119,7 +141,16 @@ class VideoPlayerActivity : ComponentActivity() {
                     player = player,
                     title = title,
                     onBack = ::finish,
-                    onSubtitles = { pickSubtitles.launch(arrayOf("application/x-subrip", "text/plain", "application/octet-stream")) },
+                    subtitles = SubtitleActions(
+                        pickFile = { pickSubtitles.launch(arrayOf("application/x-subrip", "text/vtt", "text/plain", "application/octet-stream")) },
+                        hasSaved = { app.subtitles.has(subtitleKey) },
+                        shift = ::shiftSubtitles,
+                        removeSaved = ::removeSubtitles,
+                        canSearch = { app.openSubtitles() != null },
+                        search = ::searchOnline,
+                        fetch = ::fetchOnline,
+                        status = subtitleStatus,
+                    ),
                     setBrightness = { level ->
                         window.attributes = window.attributes.apply { screenBrightness = level }
                     },
@@ -129,24 +160,123 @@ class VideoPlayerActivity : ComponentActivity() {
         }
     }
 
-    /** Subtitles from a file the user picked; the video continues from where it was. */
-    private fun loadSubtitles(subtitles: Uri) {
-        val position = player.currentPosition
-        val item = MediaItem.Builder()
+    /** The video with its saved subtitles (M18), if it has some. */
+    private fun mediaItem(): MediaItem {
+        val saved = app.subtitles.file(subtitleKey).takeIf { it.isFile }
+            ?: return MediaItem.fromUri(videoUri)
+        return MediaItem.Builder()
             .setUri(videoUri)
             .setSubtitleConfigurations(
                 listOf(
-                    MediaItem.SubtitleConfiguration.Builder(subtitles)
+                    MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(saved))
                         .setMimeType(MimeTypes.APPLICATION_SUBRIP)
+                        .setLanguage("en")
+                        .setLabel("English (saved)")
                         .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
                         .build(),
                 ),
             )
             .build()
-        player.setMediaItem(item, position)
-        player.prepare()
-        player.play()
     }
+
+    /** Loads the item again (new or changed subtitles); the video continues from where it was. */
+    private fun reload() {
+        val position = player.currentPosition
+        val playing = player.playWhenReady
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            .build()
+        player.setMediaItem(mediaItem(), position)
+        player.prepare()
+        player.playWhenReady = playing
+    }
+
+    /** A subtitle file the user picked (SRT or WebVTT): kept for this video and shown. */
+    private suspend fun importSubtitles(picked: Uri) {
+        val cues = withContext(Dispatchers.IO) {
+            runCatching {
+                contentResolver.openInputStream(picked)?.use { Captions.readCapped(it) }
+                    ?.let { Captions.parse(String(it, Charsets.UTF_8)) }
+            }.getOrNull().orEmpty()
+        }
+        if (cues.isEmpty()) {
+            subtitleStatus.value = "That file has no subtitles SDM can read (SRT or WebVTT)."
+            return
+        }
+        withContext(Dispatchers.IO) { app.subtitles.save(subtitleKey, cues) }
+        reload()
+        subtitleStatus.value = "Subtitles loaded"
+    }
+
+    /** Moves the saved subtitles earlier or later, for good (the file is rewritten). */
+    private fun shiftSubtitles(deltaMs: Long) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val cues = app.subtitles.load(subtitleKey)
+                app.subtitles.save(subtitleKey, Captions.shift(cues, deltaMs))
+            }
+            reload()
+            subtitleStatus.value = if (deltaMs > 0) "Subtitles 0.5 s later" else "Subtitles 0.5 s earlier"
+        }
+    }
+
+    private fun removeSubtitles() {
+        app.subtitles.delete(subtitleKey)
+        reload()
+    }
+
+    /** M18c: English subtitles on OpenSubtitles for this file (its hash and its name). */
+    private suspend fun searchOnline(): List<SubtitleResult> {
+        val service = app.openSubtitles() ?: throw SubtitleException("Add your OpenSubtitles API key in Settings first.")
+        val (hash, name) = withContext(Dispatchers.IO) { movieHash() to displayName() }
+        return service.search(hash, name)
+    }
+
+    private suspend fun fetchOnline(result: SubtitleResult) {
+        val service = app.openSubtitles() ?: throw SubtitleException("Add your OpenSubtitles API key in Settings first.")
+        val link = service.downloadLink(result.fileId)
+        val directory = File(cacheDir, "subtitle-download").apply { deleteRecursively(); mkdirs() }
+        try {
+            val file = try {
+                app.downloader.download(link, directory, object : DownloadListener {}).file
+            } catch (e: SdmException) {
+                throw SubtitleException(e.message ?: "The subtitles could not be downloaded.")
+            }
+            val cues = withContext(Dispatchers.IO) {
+                if (file.length() > Captions.MAX_BYTES) emptyList() else Captions.parse(file.readText(), file.extension)
+            }
+            if (cues.isEmpty()) throw SubtitleException("The downloaded file has no subtitles SDM can read.")
+            withContext(Dispatchers.IO) { app.subtitles.save(subtitleKey, cues) }
+        } finally {
+            directory.deleteRecursively()
+        }
+        reload()
+        subtitleStatus.value = "Subtitles loaded"
+    }
+
+    private fun movieHash(): String? = runCatching {
+        contentResolver.openFileDescriptor(videoUri, "r")?.use { descriptor ->
+            FileInputStream(descriptor.fileDescriptor).channel.use { channel ->
+                val size = channel.size()
+                if (size < 2L * MovieHash.CHUNK) return@use null
+                fun read(at: Long): ByteArray {
+                    val buffer = ByteBuffer.allocate(MovieHash.CHUNK)
+                    while (buffer.hasRemaining()) {
+                        if (channel.read(buffer, at + buffer.position()) < 0) break
+                    }
+                    return buffer.array()
+                }
+                MovieHash.compute(size, read(0), read(size - MovieHash.CHUNK))
+            }
+        }
+    }.getOrNull()
+
+    private fun displayName(): String = runCatching {
+        contentResolver.query(videoUri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+            if (it.moveToFirst()) it.getString(0) else null
+        }
+    }.getOrNull() ?: intent.getStringExtra(EXTRA_TITLE).orEmpty()
 
     override fun onStop() {
         super.onStop()
@@ -185,7 +315,7 @@ private fun VideoScreen(
     player: ExoPlayer,
     title: String,
     onBack: () -> Unit,
-    onSubtitles: () -> Unit,
+    subtitles: SubtitleActions,
     setBrightness: (Float) -> Unit,
     currentBrightness: () -> Float,
 ) {
@@ -201,11 +331,19 @@ private fun VideoScreen(
     var hint by remember { mutableStateOf<String?>(null) } // "Volume 40%", "+0:30"...
     var seekPreview by remember { mutableStateOf<Long?>(null) }
     var lastTouch by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var tracks by remember { mutableStateOf(player.currentTracks) }
+    var showSubtitleMenu by remember { mutableStateOf(false) }
+    var showOnline by remember { mutableStateOf(false) }
+    val subtitleStatus by subtitles.status
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playing = isPlaying
+            }
+
+            override fun onTracksChanged(changed: Tracks) {
+                tracks = changed
             }
         }
         player.addListener(listener)
@@ -218,6 +356,12 @@ private fun VideoScreen(
             // Controls hide themselves 3 s after the last touch while the video plays.
             if (showControls && playing && System.currentTimeMillis() - lastTouch > 3_000) showControls = false
             delay(250)
+        }
+    }
+    LaunchedEffect(subtitleStatus) {
+        if (subtitleStatus != null) {
+            delay(2_500)
+            subtitles.status.value = null
         }
     }
     LaunchedEffect(hint) {
@@ -315,7 +459,7 @@ private fun VideoScreen(
                         )
                     },
             )
-            hint?.let {
+            (hint ?: subtitleStatus)?.let {
                 Text(
                     it,
                     style = MaterialTheme.typography.titleMedium,
@@ -337,7 +481,7 @@ private fun VideoScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), "Back") }
                         Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { onSubtitles(); touched() }) { Icon(painterResource(R.drawable.ic_subtitles), "Subtitles") }
+                        IconButton(onClick = { showSubtitleMenu = true; touched() }) { Icon(painterResource(R.drawable.ic_subtitles), "Subtitles") }
                         Text(
                             VideoRules.speedLabel(speed),
                             style = MaterialTheme.typography.labelLarge,
@@ -381,6 +525,16 @@ private fun VideoScreen(
             }
         }
     }
+    if (showSubtitleMenu) {
+        SubtitleMenu(
+            tracks = tracks,
+            player = player,
+            subtitles = subtitles,
+            onOnline = { showSubtitleMenu = false; showOnline = true },
+            onDismiss = { showSubtitleMenu = false },
+        )
+    }
+    if (showOnline) OnlineSubtitlesDialog(subtitles) { showOnline = false }
 }
 
 @Composable

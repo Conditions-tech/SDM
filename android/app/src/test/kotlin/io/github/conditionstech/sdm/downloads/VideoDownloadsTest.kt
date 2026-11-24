@@ -7,6 +7,7 @@ import io.github.conditionstech.sdm.media.ConvertFormat
 import io.github.conditionstech.sdm.media.VideoChoice
 import io.github.conditionstech.sdm.media.VideoPageException
 import io.github.conditionstech.sdm.media.VideoTools
+import io.github.conditionstech.sdm.player.Captions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -60,6 +61,7 @@ class VideoDownloadsTest {
                 val data = when (request.url.encodedPath) {
                     "/stream/video" -> video
                     "/stream/audio" -> audio
+                    "/captions.vtt" -> CAPTIONS.toByteArray()
                     else -> return MockResponse.Builder().code(404).build()
                 }
                 val range = request.headers["Range"]
@@ -95,7 +97,8 @@ class VideoDownloadsTest {
             fun stream(id: String, v: String, a: String, size: Int) =
                 """{"id":"$id","url":"$base/stream/$id","ext":"${if (v == "none") "m4a" else "mp4"}","vcodec":"$v","acodec":"$a",""" +
                     """"height":${if (v == "none") 0 else 720},"tbr":1,"size":$size,"headers":{"User-Agent":"PageUA/1","Cookie":"no"}}"""
-            return """{"title":"My clip: part 1/2","streams":[${stream("video", "avc1.4d401f", "none", video.size)},${stream("audio", "none", "mp4a.40.2", audio.size)}]}"""
+            return """{"title":"My clip: part 1/2","streams":[${stream("video", "avc1.4d401f", "none", video.size)},${stream("audio", "none", "mp4a.40.2", audio.size)}],""" +
+                """"captions":[{"lang":"en","ext":"vtt","url":"$base/captions.vtt","auto":true},{"lang":"en","ext":"vtt","url":"ftp://x/y.vtt","auto":false}]}"""
         }
 
         override suspend fun merge(video: File, audio: File, output: File) = output.writeBytes(video.readBytes() + audio.readBytes())
@@ -104,10 +107,14 @@ class VideoDownloadsTest {
             output.writeBytes(format.name.toByteArray() + source.readBytes())
     }
 
-    private fun downloads(policy: NetworkPolicy = NetworkPolicy(allowLoopback = true)) = Downloads(
+    private val savedSubtitles = CopyOnWriteArrayList<Pair<String, List<Captions.Cue>>>()
+
+    private fun downloads(policy: NetworkPolicy = NetworkPolicy(allowLoopback = true), subtitles: Boolean = false) = Downloads(
         store, FolderPublisher(saved), work,
         HttpDownloader(policy, DownloadSettings(backoffBaseMs = 10, chunkSize = 8 * 1024)),
         scope, videoTools = tools,
+        wantSubtitles = { subtitles },
+        onSubtitles = { uri, cues -> savedSubtitles.add(uri to cues) },
     )
 
     private fun Downloads.waitFor(id: Long, predicate: (DownloadItem) -> Boolean): DownloadItem = runBlocking {
@@ -125,6 +132,27 @@ class VideoDownloadsTest {
         val streamRequests = requests.filter { it.url.encodedPath.startsWith("/stream/") }
         assertTrue(streamRequests.all { it.headers["User-Agent"] == "PageUA/1" && it.headers["Cookie"] == null })
         assertEquals(VideoChoice.P720, store.rows[id]!!.videoChoice)
+    }
+
+    @Test
+    fun thePagesEnglishSubtitlesAreSavedWithTheVideo() {
+        val list = downloads(subtitles = true)
+        val id = list.add("$base/watch?v=9", VideoChoice.P720)
+        val done = list.waitFor(id) { it.state == DownloadState.COMPLETED }
+        val (uri, cues) = savedSubtitles.single()
+        assertEquals(done.savedUri, uri)
+        assertEquals(listOf(Captions.Cue(1_000, 2_500, "Hello from the page")), cues)
+        assertTrue(work.listFiles()!!.isEmpty()) // the caption file is gone too
+    }
+
+    @Test
+    fun subtitlesAreSkippedWhenTurnedOffOrForMusic() {
+        val list = downloads(subtitles = false)
+        list.waitFor(list.add("$base/watch?v=10", VideoChoice.P720)) { it.state == DownloadState.COMPLETED }
+        val withSubtitles = downloads(subtitles = true)
+        withSubtitles.waitFor(withSubtitles.add("$base/watch?v=11", VideoChoice.MP3)) { it.state == DownloadState.COMPLETED }
+        assertTrue(savedSubtitles.isEmpty())
+        assertTrue(requests.none { it.url.encodedPath == "/captions.vtt" })
     }
 
     @Test
@@ -180,5 +208,9 @@ class VideoDownloadsTest {
         runBlocking { kotlinx.coroutines.delay(200) }
         assertTrue(work.listFiles()!!.toList().toString(), work.listFiles()!!.isEmpty())
         assertTrue(saved.listFiles()!!.isEmpty())
+    }
+
+    private companion object {
+        const val CAPTIONS = "WEBVTT\n\n00:00:01.000 --> 00:00:02.500\nHello from the page\n"
     }
 }

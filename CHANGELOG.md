@@ -6,6 +6,12 @@ while SDM is in 0.x.
 
 ## [Unreleased]
 
+- M18: English subtitles on Android. The video player's Subtitles menu lists subtitles inside
+  the file (English is chosen by itself), loads .srt/.vtt files, and finds English subtitles
+  on OpenSubtitles.com (your own free API key in Settings). Video-page downloads also save the
+  page's English subtitles (YouTube can translate any language). Saved subtitles load by
+  themselves and can be moved 0.5 s earlier or later.
+
 - M17c: the Android video player: full screen, swipes for brightness, volume and seeking,
   double-tap to skip 10 s, speed, a touch lock, resume where you left off, and .srt subtitles.
 

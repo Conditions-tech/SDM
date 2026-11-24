@@ -1,6 +1,8 @@
 package io.github.conditionstech.sdm
 
 import android.app.Application
+import android.content.ContentUris
+import android.net.Uri
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import io.github.conditionstech.sdm.downloads.Downloads
@@ -8,10 +10,13 @@ import io.github.conditionstech.sdm.downloads.MediaStorePublisher
 import io.github.conditionstech.sdm.downloads.SqliteHistory
 import io.github.conditionstech.sdm.engine.DownloadSettings
 import io.github.conditionstech.sdm.engine.HttpDownloader
+import io.github.conditionstech.sdm.engine.policyClient
 import io.github.conditionstech.sdm.library.MediaStoreLibrary
 import io.github.conditionstech.sdm.library.Playlists
 import io.github.conditionstech.sdm.library.SqlitePlaylists
 import io.github.conditionstech.sdm.player.MusicPlayer
+import io.github.conditionstech.sdm.player.OpenSubtitles
+import io.github.conditionstech.sdm.player.SubtitleStore
 import io.github.conditionstech.sdm.player.SleepTimer
 import io.github.conditionstech.sdm.media.AndroidMediaConverter
 import io.github.conditionstech.sdm.media.AndroidVideoTools
@@ -35,6 +40,18 @@ class SdmApplication : Application() {
         private set
     lateinit var playlists: Playlists
         private set
+    lateinit var subtitles: SubtitleStore
+        private set
+    lateinit var downloader: HttpDownloader
+        private set
+
+    /** For SDM's small web requests (subtitle searches): the same network policy as downloads. */
+    val httpClient by lazy { policyClient() }
+
+    /** OpenSubtitles with the user's key and sign-in, or null until a key is set (M18c). */
+    fun openSubtitles(): OpenSubtitles? = preferences.openSubtitlesKey.takeIf { it.isNotBlank() }?.let {
+        OpenSubtitles(httpClient, it, preferences.openSubtitlesToken, userAgent = "SDM v${BuildConfig.VERSION_NAME}")
+    }
 
     /** Lives with the app, so it keeps counting while music plays with the screen off (M17b). */
     val sleepTimer = SleepTimer(CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
@@ -50,17 +67,25 @@ class SdmApplication : Application() {
         playlists = Playlists(SqlitePlaylists(this))
         val mediaConverter = AndroidMediaConverter(this)
         // Partial files live in the app's own storage; finished files are copied to Download/SDM.
+        subtitles = SubtitleStore(File(filesDir, "subtitles"))
+        downloader = HttpDownloader(settings = DownloadSettings(userAgent = "SDM/${BuildConfig.VERSION_NAME} (Android)"))
         val work = File(getExternalFilesDir(null) ?: filesDir, "partial").apply { mkdirs() }
         downloads = Downloads(
             store = SqliteHistory(this),
             publisher = MediaStorePublisher(this),
             workDir = work,
-            downloader = HttpDownloader(settings = DownloadSettings(userAgent = "SDM/${BuildConfig.VERSION_NAME} (Android)")),
+            downloader = downloader,
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
             onActive = { DownloadService.start(this) },
             onFinished = { Notifications.finished(this, it) },
             videoTools = AndroidVideoTools(mediaConverter),
             av1InMp4 = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
+            wantSubtitles = { preferences.saveSubtitles },
+            onSubtitles = { savedUri, cues ->
+                runCatching { ContentUris.parseId(Uri.parse(savedUri)) }.getOrNull()?.takeIf { it > 0 }?.let {
+                    subtitles.save(SubtitleStore.keyFor(it), cues)
+                }
+            },
         )
         conversions = Conversions(
             converter = mediaConverter,

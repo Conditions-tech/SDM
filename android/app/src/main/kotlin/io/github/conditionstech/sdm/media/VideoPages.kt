@@ -45,7 +45,10 @@ data class Stream(
     val isAac get() = acodec.startsWith("mp4a") || acodec == "aac"
 }
 
-data class PageInfo(val title: String, val streams: List<Stream>)
+data class PageInfo(val title: String, val streams: List<Stream>, val captions: List<Caption> = emptyList())
+
+/** An English subtitle file the page offers (M18b); [automatic] = made by the site's speech recognition or translation. */
+data class Caption(val language: String, val ext: String, val url: String, val automatic: Boolean)
 
 /** The streams to download: video and audio separately, or one stream that has both. */
 data class StreamPlan(val video: Stream?, val audio: Stream?) {
@@ -82,8 +85,26 @@ object VideoPages {
                 order = index,
             )
         }
-        return PageInfo(root.optString("title").ifBlank { "video" }.take(200), streams)
+        val captionList = root.optJSONArray("captions")
+        val captions = (0 until (captionList?.length() ?: 0)).mapNotNull { index ->
+            val c = captionList!!.optJSONObject(index) ?: return@mapNotNull null
+            val url = c.optString("url")
+            val ext = c.optString("ext").lowercase()
+            if (!(url.startsWith("https://") || url.startsWith("http://")) || ext !in CAPTION_EXTS) return@mapNotNull null
+            Caption(c.optString("lang").take(20), ext, url, c.optBoolean("auto"))
+        }
+        return PageInfo(root.optString("title").ifBlank { "video" }.take(200), streams, captions)
     }
+
+    private val CAPTION_EXTS = listOf("srt", "srv1", "vtt") // SDM's preference, best first
+
+    /**
+     * The English subtitles to save with a video: ones the site's people wrote first ("en"
+     * before "en-GB"...), then automatic ones; SRT, then srv1 (clean timing), then WebVTT.
+     */
+    fun chooseCaption(captions: List<Caption>): Caption? = captions.minWithOrNull(
+        compareBy<Caption>({ it.automatic }, { it.language != "en" }, { it.language == "en-orig" }, { CAPTION_EXTS.indexOf(it.ext) }),
+    )
 
     /** [av1] is true where MediaMuxer can put AV1 into MP4 (Android 14+). */
     fun choose(info: PageInfo, choice: VideoChoice, av1: Boolean = false): StreamPlan {

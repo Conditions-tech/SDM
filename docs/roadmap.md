@@ -22,6 +22,7 @@ and its tests have actually run and passed.
 | M14 | Android version: a native Kotlin app (APK) | Done (2026-11-23; SDM for Android 1.0.0 released) |
 | M15 | Media on Android: converter (MP4, M4A, MP3) and video pages (yt-dlp, off by default) | Done (2026-11-23; released in Android 1.0.0) |
 | M17 | Android: music and video players | Planned (ADR-0025) |
+| M18 | Android: English subtitles (in the file, from the page, from OpenSubtitles) | In progress (ADR-0026) |
 
 ## M0: Environment inspection (done)
 
@@ -765,3 +766,30 @@ whole phone's media after Android's permission. Steps (each to be approved befor
   Checked on the owner's phone: playback, speed, volume swipe, lock/unlock, double-tap +10 s,
   resume after leaving at 6 s, Back. Subtitles not yet tried on the phone.
 - M17d: polish, tests (fakes on the PC, on-phone checks), release 1.1.0.
+
+## M18: English subtitles on Android (in progress)
+
+The owner's goal: English subtitles for any film (English, Korean, Japanese...) without
+hunting for files. Plan approved 2026-11-24; the owner moved Whisper (making subtitles on the
+phone) to later and asked for the three steps below first (ADR-0026).
+
+- M18a (done): subtitles inside the file (MKV and MP4 tracks) are offered in a Subtitles menu,
+  and English is chosen by itself. Each video's own subtitles (picked file, page or online)
+  are kept as SRT in the app's storage and load automatically; "0.5 s earlier / later"
+  fixes timing for good; they can be deleted. SRT and WebVTT files can be picked.
+- M18b (done): with a video-page download, yt-dlp also lists the page's English subtitles
+  (people-made first, then automatic ones; YouTube translates any language into English).
+  SDM's engine fetches the file (network policy) and keeps it with the video. A setting,
+  on by default; never for MP3/M4A.
+- M18c (done, waiting for the owner's API key for a real check): "Find English subtitles
+  online" asks OpenSubtitles.com by the file's movie hash (exact match, already in sync) and
+  its name; the user taps a result. Needs the owner's own free API key; signing in is optional
+  (more downloads a day) and keeps only the token, never the password.
+- Checked: 7 + 8 new PC tests (subtitle formats, movie hash, the OpenSubtitles client against a
+  local server, the network policy), 2 new download tests (subtitles saved with a video, and
+  skipped when off or for music), lint 0 errors. On the owner's phone: saved subtitles appear
+  on "Me at the zoo", the menu lists them, "0.5 s later" rewrote the times, and online search
+  without a key explains what to do. Not yet tried on the phone: a real YouTube download with
+  subtitles, a film with built-in subtitles, OpenSubtitles with a real key.
+- Later (M18d, optional): Whisper (whisper.cpp) to make English subtitles on the phone for
+  videos with none anywhere; first a speed test on the owner's phone.
